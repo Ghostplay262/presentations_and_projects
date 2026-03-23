@@ -1,0 +1,1711 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Etyka i Prywatność Danych — Cykl Życia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;700&family=Fraunces:ital,wght@0,300;0,700;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --accent: #e63946;
+    --accent2: #457b9d;
+    --accent3: #f4a261;
+    --gold: #e9c46a;
+    --text: #e8e8f0;
+    --text-dim: #888899;
+    --border: rgba(255,255,255,0.08);
+    --green: #2a9d8f;
+    --purple: #7b2d8b;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    cursor: default;
+    user-select: none;
+  }
+
+  /* ─── SLIDE SYSTEM ─── */
+  .slides-container {
+    width: 100%; height: 100%;
+    position: relative;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.6s ease, transform 0.6s ease;
+    transform: translateY(20px);
+    overflow: hidden;
+  }
+
+  .slide.active {
+    opacity: 1;
+    pointer-events: all;
+    transform: translateY(0);
+  }
+
+  /* ─── NAVIGATION ─── */
+  #nav {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: rgba(10,10,15,0.92);
+    border: 1px solid var(--border);
+    border-radius: 40px;
+    padding: 10px 20px;
+    backdrop-filter: blur(12px);
+  }
+
+  #nav button {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 18px;
+    border-radius: 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+
+  #nav button:hover { background: var(--accent); border-color: var(--accent); }
+
+  #slide-counter {
+    font-size: 11px;
+    color: var(--text-dim);
+    min-width: 52px;
+    text-align: center;
+    letter-spacing: 2px;
+  }
+
+  .dot-nav {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+  }
+
+  .dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    transition: all 0.3s;
+    cursor: pointer;
+  }
+  .dot.active { background: var(--accent); transform: scale(1.4); }
+
+  /* ─── PROGRESS BAR ─── */
+  #progress-bar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent3));
+    transition: width 0.5s ease;
+    z-index: 999;
+  }
+
+  /* ─── SLIDE LABEL ─── */
+  .slide-label {
+    position: absolute;
+    top: 22px; right: 28px;
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    z-index: 10;
+  }
+
+  .slide-label span {
+    color: var(--accent);
+  }
+
+  /* ─────────────────────────────────────────
+     SLIDE 0 — COVER
+  ───────────────────────────────────────── */
+  #s0 {
+    background: var(--bg);
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    position: relative;
+  }
+
+  .cover-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(230,57,70,0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(230,57,70,0.07) 1px, transparent 1px);
+    background-size: 60px 60px;
+    animation: grid-pulse 8s ease-in-out infinite;
+  }
+
+  @keyframes grid-pulse {
+    0%,100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+
+  .cover-glow {
+    position: absolute;
+    width: 600px; height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(230,57,70,0.15) 0%, transparent 70%);
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    animation: glow-pulse 4s ease-in-out infinite;
+  }
+
+  @keyframes glow-pulse {
+    0%,100% { transform: translate(-50%,-50%) scale(1); opacity: 0.6; }
+    50% { transform: translate(-50%,-50%) scale(1.2); opacity: 1; }
+  }
+
+  .cover-content {
+    position: relative;
+    z-index: 2;
+  }
+
+  .cover-eyebrow {
+    font-size: 11px;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 24px;
+    animation: fadeUp 0.8s ease both;
+  }
+
+  .cover-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(56px, 8vw, 110px);
+    line-height: 0.9;
+    letter-spacing: 2px;
+    margin-bottom: 20px;
+    animation: fadeUp 0.8s 0.15s ease both;
+  }
+
+  .cover-title em {
+    color: var(--accent);
+    font-style: normal;
+    display: block;
+  }
+
+  .cover-subtitle {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 300;
+    font-size: clamp(14px, 2vw, 18px);
+    color: var(--text-dim);
+    max-width: 560px;
+    line-height: 1.7;
+    animation: fadeUp 0.8s 0.3s ease both;
+    margin: 0 auto 40px;
+  }
+
+  .cover-tags {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    animation: fadeUp 0.8s 0.45s ease both;
+  }
+
+  .tag {
+    border: 1px solid var(--border);
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ─────────────────────────────────────────
+     SHARED LAYOUT COMPONENTS
+  ───────────────────────────────────────── */
+
+  .slide-header {
+    padding: 36px 60px 0;
+    display: flex;
+    align-items: flex-end;
+    gap: 20px;
+    flex-shrink: 0;
+  }
+
+  .slide-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 80px;
+    line-height: 1;
+    color: rgba(255,255,255,0.06);
+    flex-shrink: 0;
+  }
+
+  .slide-heading {
+    flex: 1;
+  }
+
+  .slide-heading .eyebrow {
+    font-size: 10px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+
+  .slide-heading h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(28px, 4vw, 48px);
+    letter-spacing: 1px;
+    line-height: 1;
+    color: var(--text);
+  }
+
+  .slide-body {
+    flex: 1;
+    padding: 28px 60px 80px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent) transparent;
+  }
+
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+    margin: 20px 0;
+    opacity: 0.4;
+  }
+
+  /* ─── GRID LAYOUTS ─── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; }
+
+  /* ─── CARDS ─── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 22px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+
+  .card:hover { border-color: rgba(255,255,255,0.2); }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+
+  .card.red::before { background: var(--accent); }
+  .card.blue::before { background: var(--accent2); }
+  .card.orange::before { background: var(--accent3); }
+  .card.gold::before { background: var(--gold); }
+  .card.green::before { background: var(--green); }
+  .card.purple::before { background: var(--purple); }
+
+  .card-icon {
+    font-size: 28px;
+    margin-bottom: 12px;
+  }
+
+  .card h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+    color: var(--text);
+  }
+
+  .card p, .card li {
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--text-dim);
+  }
+
+  .card ul { list-style: none; }
+  .card ul li::before { content: '→ '; color: var(--accent); }
+
+  /* ─── CRISIS BOX ─── */
+  .crisis-box {
+    background: rgba(230,57,70,0.07);
+    border: 1px solid rgba(230,57,70,0.3);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
+    padding: 18px 22px;
+    margin-bottom: 16px;
+  }
+
+  .crisis-box .crisis-year {
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+
+  .crisis-box h4 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 17px;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+
+  .crisis-box p {
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--text-dim);
+  }
+
+  .crisis-box .crisis-scale {
+    display: inline-block;
+    margin-top: 10px;
+    background: var(--accent);
+    color: white;
+    font-size: 10px;
+    padding: 3px 10px;
+    border-radius: 3px;
+    letter-spacing: 1px;
+  }
+
+  /* ─── FACT BOX ─── */
+  .fact-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px 20px;
+    margin-bottom: 12px;
+  }
+
+  .fact-box .fact-lead {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 38px;
+    color: var(--gold);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .fact-box p {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  /* ─── CORP CARD ─── */
+  .corp-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 22px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .corp-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px;
+    margin-bottom: 12px;
+    letter-spacing: 2px;
+  }
+
+  .corp-logo.meta { color: #0668E1; }
+  .corp-logo.alpha { color: #4285F4; }
+  .corp-logo.amzn { color: #FF9900; }
+  .corp-logo.appl { color: #A2AAAD; }
+
+  .data-pill {
+    display: inline-block;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 10px;
+    padding: 3px 9px;
+    margin: 3px 2px;
+    color: var(--text-dim);
+    letter-spacing: 0.5px;
+  }
+
+  /* ─── LIFECYCLE FLOW ─── */
+  .lifecycle-flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    overflow-x: auto;
+    padding: 20px 0;
+  }
+
+  .lifecycle-step {
+    flex-shrink: 0;
+    text-align: center;
+    padding: 0 8px;
+  }
+
+  .lifecycle-step .step-icon {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    margin: 0 auto 8px;
+    position: relative;
+    transition: all 0.3s;
+  }
+
+  .lifecycle-step .step-icon:hover {
+    border-color: var(--accent);
+    background: rgba(230,57,70,0.1);
+  }
+
+  .lifecycle-step .step-name {
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .lifecycle-arrow {
+    color: var(--accent);
+    font-size: 14px;
+    flex-shrink: 0;
+    opacity: 0.5;
+    padding: 0 2px;
+  }
+
+  /* ─── RISK METER ─── */
+  .risk-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .risk-label {
+    font-size: 11px;
+    min-width: 160px;
+    color: var(--text-dim);
+    letter-spacing: 0.5px;
+  }
+
+  .risk-bar-wrap {
+    flex: 1;
+    height: 6px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .risk-bar {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 1s ease;
+  }
+
+  .risk-val {
+    font-size: 12px;
+    min-width: 35px;
+    text-align: right;
+    font-weight: 700;
+  }
+
+  /* ─── QUOTE ─── */
+  .quote-block {
+    border-left: 3px solid var(--gold);
+    padding: 16px 22px;
+    margin: 16px 0;
+    background: rgba(233,196,106,0.04);
+    border-radius: 0 6px 6px 0;
+  }
+
+  .quote-block blockquote {
+    font-family: 'DM Serif Display', serif;
+    font-size: 16px;
+    font-style: italic;
+    line-height: 1.6;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+
+  .quote-block cite {
+    font-size: 11px;
+    color: var(--gold);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  /* ─── TIMELINE ─── */
+  .timeline {
+    position: relative;
+    padding-left: 28px;
+  }
+
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 8px; top: 0; bottom: 0;
+    width: 1px;
+    background: linear-gradient(180deg, var(--accent), transparent);
+    opacity: 0.3;
+  }
+
+  .tl-item {
+    position: relative;
+    margin-bottom: 18px;
+  }
+
+  .tl-item::before {
+    content: '';
+    position: absolute;
+    left: -24px; top: 4px;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  .tl-year {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 3px;
+  }
+
+  .tl-text {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  .tl-text strong { color: var(--text); }
+
+  /* ─── BIG STAT ─── */
+  .big-stat {
+    text-align: center;
+    padding: 20px;
+  }
+
+  .big-stat .number {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 72px;
+    line-height: 1;
+    background: linear-gradient(135deg, var(--accent), var(--accent3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .big-stat .unit {
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  /* ─── WARNING BOX ─── */
+  .warn-box {
+    background: rgba(244,162,97,0.08);
+    border: 1px solid rgba(244,162,97,0.3);
+    border-left: 3px solid var(--accent3);
+    padding: 14px 18px;
+    border-radius: 0 6px 6px 0;
+    margin-bottom: 12px;
+  }
+
+  .warn-box h4 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 15px;
+    letter-spacing: 1px;
+    color: var(--accent3);
+    margin-bottom: 5px;
+  }
+
+  .warn-box p {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  /* ─── GDPR GRID ─── */
+  .gdpr-principle {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .gdpr-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    color: var(--accent);
+    line-height: 1;
+    flex-shrink: 0;
+    width: 40px;
+  }
+
+  .gdpr-text h4 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 14px;
+    margin-bottom: 3px;
+  }
+
+  .gdpr-text p {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  /* ─────────────────────────────────────────
+     SLIDE-SPECIFIC BACKGROUNDS
+  ───────────────────────────────────────── */
+  .slide-bg-1 {
+    background: radial-gradient(ellipse at top right, rgba(69,123,157,0.08) 0%, transparent 60%), var(--bg);
+  }
+
+  .slide-bg-2 {
+    background: radial-gradient(ellipse at bottom left, rgba(123,45,139,0.08) 0%, transparent 60%), var(--bg);
+  }
+
+  .slide-bg-3 {
+    background: radial-gradient(ellipse at top left, rgba(230,57,70,0.06) 0%, transparent 55%), var(--bg);
+  }
+
+  .slide-bg-4 {
+    background: radial-gradient(ellipse at bottom right, rgba(42,157,143,0.07) 0%, transparent 55%), var(--bg);
+  }
+
+  .slide-bg-5 {
+    background: radial-gradient(ellipse at center, rgba(233,196,106,0.06) 0%, transparent 60%), var(--bg);
+  }
+
+  /* table-like layout for archiving */
+  .archive-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+
+  .archive-table th {
+    text-align: left;
+    padding: 10px 14px;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    border-bottom: 1px solid rgba(230,57,70,0.3);
+    font-weight: normal;
+  }
+
+  .archive-table td {
+    padding: 10px 14px;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--border);
+    line-height: 1.5;
+  }
+
+  .archive-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .archive-table td:first-child {
+    color: var(--text);
+    font-weight: 700;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 10px;
+    letter-spacing: 1px;
+  }
+
+  /* ─── BIBLIOGRAPHY ─── */
+  .bib-entry {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    align-items: flex-start;
+  }
+
+  .bib-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 14px;
+    color: var(--accent);
+    flex-shrink: 0;
+    width: 24px;
+    padding-top: 1px;
+  }
+
+  .bib-title {
+    font-size: 11px;
+    color: var(--text);
+    line-height: 1.5;
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  .bib-meta {
+    font-size: 10px;
+    color: var(--text-dim);
+    line-height: 1.55;
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  .bib-url {
+    font-size: 10px;
+    color: var(--accent2);
+    text-decoration: none;
+    letter-spacing: 0.3px;
+    transition: color 0.2s;
+  }
+
+  .bib-url:hover { color: var(--gold); text-decoration: underline; }
+
+  .badge-red { background: rgba(230,57,70,0.2); color: var(--accent); }
+  .badge-green { background: rgba(42,157,143,0.2); color: var(--green); }
+  .badge-orange { background: rgba(244,162,97,0.2); color: var(--accent3); }
+</style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+
+<!-- ═══════════════════════════════════════
+     SLIDE 0 — COVER
+═══════════════════════════════════════ -->
+<div class="slides-container">
+
+<div class="slide active" id="s0">
+  <div class="cover-grid"></div>
+  <div class="cover-glow"></div>
+  <div class="cover-content">
+    <div class="cover-eyebrow">Etyka Cyfrowa · Cykl Życia Danych · Prywatność</div>
+    <h1 class="cover-title">
+      DANE<br>
+      <em>WŁADZA</em><br>
+      ODPOWIEDZIALNOŚĆ
+    </h1>
+    <p class="cover-subtitle">
+      Rola etyki i prywatności na każdym etapie cyklu życia danych — od zbierania po archiwizację.
+      Przypadki korporacyjne, kryzysy, ryzyko użytkownika.
+    </p>
+    <div class="cover-tags">
+      <span class="tag">GDPR / RODO</span>
+      <span class="tag">Meta · Alphabet · Amazon</span>
+      <span class="tag">Cambridge Analytica</span>
+      <span class="tag">Snowden</span>
+      <span class="tag">Big Data Ethics</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SLIDE 1 — CYKL ŻYCIA DANYCH
+═══════════════════════════════════════ -->
+<div class="slide slide-bg-1" id="s1">
+  <div class="slide-label">SLIDE <span>01</span> / 10</div>
+  <div class="slide-header">
+    <div class="slide-num">01</div>
+    <div class="slide-heading">
+      <div class="eyebrow">Przegląd</div>
+      <h2>Cykl Życia Danych</h2>
+    </div>
+  </div>
+  <div class="slide-body">
+    <p style="font-size:13px;color:var(--text-dim);max-width:720px;line-height:1.8;margin-bottom:24px;">
+      Każdy bajt informacji przechodzi przez powtarzalny cykl — od momentu powstania do trwałego usunięcia lub archiwizacji. Na każdym etapie pojawiają się konkretne zagrożenia dla prywatności oraz zobowiązania etyczne wobec użytkowników.
+    </p>
+
+    <div class="lifecycle-flow" style="justify-content:center; margin-bottom:28px;">
+      <div class="lifecycle-step">
+        <div class="step-icon" style="border-color:var(--accent);color:var(--accent);">📡</div>
+        <div class="step-name">Zbieranie</div>
+      </div>
+      <div class="lifecycle-arrow">──▶</div>
+      <div class="lifecycle-step">
+        <div class="step-icon" style="border-color:var(--accent2);color:var(--accent2);">⚙️</div>
+        <div class="step-name">Przetwarzanie</div>
+      </div>
+      <div class="lifecycle-arrow">──▶</div>
+      <div class="lifecycle-step">
+        <div class="step-icon" style="border-color:var(--gold);color:var(--gold);">💾</div>
+        <div class="step-name">Przechowywanie</div>
+      </div>
+      <div class="lifecycle-arrow">──▶</div>
+      <div class="lifecycle-step">
+        <div class="step-icon" style="border-color:var(--accent3);color:var(--accent3);">🔗</div>
+        <div class="step-name">Udostępnianie</div>
+      </div>
+      <div class="lifecycle-arrow">──▶</div>
+      <div class="lifecycle-step">
+        <div class="step-icon" style="border-color:var(--green);color:var(--green);">🗂️</div>
+        <div class="step-name">Archiwizacja</div>
+      </div>
+      <div class="lifecycle-arrow">──▶</div>
+      <div class="lifecycle-step">
+        <div class="step-icon" style="border-color:var(--purple);color:var(--purple);">🗑️</div>
+        <div class="step-name">Usunięcie</div>
+      </div>
+    </div>
+
+    <div class="grid-3">
+      <div class="card red">
+        <div class="card-icon">⚠️</div>
+        <h3>Zasada Minimalizacji</h3>
+        <p>Zbieraj tylko tyle danych, ile absolutnie niezbędne do realizacji celu. Każdy dodatkowy punkt danych to dodatkowe ryzyko wycieku.</p>
+      </div>
+      <div class="card blue">
+        <div class="card-icon">🎯</div>
+        <h3>Ograniczenie Celu</h3>
+        <p>Dane zebrane w konkretnym celu nie powinny być używane do innych celów bez wyraźnej zgody użytkownika (zasada RODO).</p>
+      </div>
+      <div class="card orange">
+        <div class="card-icon">⏰</div>
+        <h3>Ograniczenie Przechowywania</h3>
+        <p>Dane nie powinny być trzymane dłużej, niż jest to konieczne. „Dane wieczne" to mit i zagrożenie jednocześnie.</p>
+      </div>
+    </div>
+
+    <div class="quote-block" style="margin-top:20px;">
+      <blockquote>„Jeśli coś jest za darmo, to Ty jesteś produktem."</blockquote>
+      <cite>— Przypisywane Andrewowi Lewisowi, 2010 (MetaFilter)</cite>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SLIDE 2 — ZBIERANIE DANYCH
+═══════════════════════════════════════ -->
+<div class="slide slide-bg-2" id="s2">
+  <div class="slide-label">SLIDE <span>02</span> / 10</div>
+  <div class="slide-header">
+    <div class="slide-num">02</div>
+    <div class="slide-heading">
+      <div class="eyebrow">Etap I</div>
+      <h2>Zbieranie Danych — jak korporacje zbierają informacje</h2>
+    </div>
+  </div>
+  <div class="slide-body">
+    <div class="grid-2" style="margin-bottom:20px;">
+      <div>
+        <div class="corp-card" style="margin-bottom:16px;">
+          <div class="corp-logo meta">META</div>
+          <p style="font-size:11px;color:var(--text-dim);line-height:1.6;margin-bottom:12px;">
+            Facebook/Instagram/WhatsApp zbiera dane nawet od osób, które nie posiadają konta — tzw. <strong style="color:var(--text);">„shadow profiles"</strong>. Piksele śledzące na zewnętrznych stronach raportują Twoją aktywność do Meta.
+          </p>
+          <div>
+            <span class="data-pill">Lokalizacja GPS</span>
+            <span class="data-pill">Historia przeglądania</span>
+            <span class="data-pill">Twarz (FaceID)</span>
+            <span class="data-pill">Kontakty</span>
+            <span class="data-pill">Mikrofon*</span>
+            <span class="data-pill">Wzorce zachowań</span>
+            <span class="data-pill">Shadow profiles</span>
+          </div>
+        </div>
+        <div class="corp-card">
+          <div class="corp-logo alpha">ALPHABET</div>
+          <p style="font-size:11px;color:var(--text-dim);line-height:1.6;margin-bottom:12px;">
+            Google przez aplikacje, Android, Chrome i Gmail buduje profil obejmujący zdrowie, politykę, orientację seksualną i przekonania religijne — nawet bez bezpośredniego zapytania.
+          </p>
+          <div>
+            <span class="data-pill">Historia wyszukiwań</span>
+            <span class="data-pill">Gmail (skany AI)</span>
+            <span class="data-pill">YouTube watch time</span>
+            <span class="data-pill">Lokalizacja 24/7</span>
+            <span class="data-pill">Zakupy (Google Pay)</span>
+            <span class="data-pill">Zdrowie (Fitbit)</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="crisis-box">
+          <div class="crisis-year">🔴 KRYZYS · 2018</div>
+          <h4>Cambridge Analytica — 87 mln profili</h4>
+          <p>Firma pozyskała dane osobowe 87 milionów użytkowników Facebooka bez ich zgody poprzez quiz psychologiczny. Dane użyto do mikrotargetowania politycznego w kampanii Trumpa i Brexit. Mark Zuckerberg zeznawał przed Kongresem USA. Facebook zapłacił karę 5 mld USD — największą w historii FTC.</p>
+          <span class="crisis-scale">SKALA: GLOBALNY · 87M OFIAR</span>
+        </div>
+
+        <div class="warn-box">
+          <h4>⚠ Dark Patterns w Zbieraniu Zgód</h4>
+          <p>Korporacje projektują interfejsy tak, by utrudnić odmowę zgody: domyślnie zaznaczone pola, przycisk „Zgadzam się" jest zielony i duży, a „Odmów" — szary i ukryty po 3 kliknięciach.</p>
+        </div>
+
+        <div class="fact-box">
+          <div class="fact-lead">2.7 ZB</div>
+          <p>tyle danych wygenerowała ludzkość do 2022 roku. Google przetwarza codziennie ok. <strong>8,5 miliarda</strong> zapytań — każde z nich jest zapisane i powiązane z Twoim profilem.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SLIDE 3 — PRZETWARZANIE DANYCH
+═══════════════════════════════════════ -->
+<div class="slide slide-bg-3" id="s3">
+  <div class="slide-label">SLIDE <span>03</span> / 10</div>
+  <div class="slide-header">
+    <div class="slide-num">03</div>
+    <div class="slide-heading">
+      <div class="eyebrow">Etap II</div>
+      <h2>Przetwarzanie — algorytmy, AI i profilowanie</h2>
+    </div>
+  </div>
+  <div class="slide-body">
+    <div class="grid-2" style="margin-bottom:20px;">
+      <div>
+        <div class="card blue" style="margin-bottom:16px;">
+          <div class="card-icon">🧠</div>
+          <h3>Profilowanie Użytkownika (Meta)</h3>
+          <ul>
+            <li>Model psychograficzny OCEAN budowany na bazie lajków</li>
+            <li>Przewidywanie ciąży, choroby, utraty pracy</li>
+            <li>Facebook eksperyment emocjonalny 2014 — 689 tys. użytkowników bez zgody</li>
+            <li>Algorytm rankujący treści pod kątem „zaangażowania" = outrage machine</li>
+            <li>Reklamy targetowane na podstawie danych zdrowotnych (grupy wsparcia)</li>
+          </ul>
+        </div>
+        <div class="card gold">
+          <div class="card-icon">🔍</div>
+          <h3>Google — Wiedzieć Zanim Zapytasz</h3>
+          <ul>
+            <li>AutoComplete przewiduje intencje z 97% dokładnością</li>
+            <li>Gmail skanowany przez AI do 2017 (oficjalnie zaprzestane)</li>
+            <li>Street View: zbieranie sieci Wi-Fi bez zgody (Project Wi-Spy)</li>
+            <li>Google Docs i pliki Drive analizowane przez modele ML</li>
+            <li>DeepMind Health — dostęp do 1,6 mln rekordów NHS bez zgody pacjentów</li>
+          </ul>
+        </div>
+      </div>
+
+      <div>
+        <div class="crisis-box" style="margin-bottom:14px;">
+          <div class="crisis-year">🔴 KRYZYS · 2014</div>
+          <h4>Eksperyment Emocjonalny Facebook</h4>
+          <p>Facebook zmodyfikował newsfeed 689 000 użytkowników bez ich wiedzy, aby zbadać wpływ treści na emocje. Badanie opublikowano w PNAS. Okazało się, że smutek jest „zaraźliwy" w sieci. Reakcja publiczna była furią — zakwestionowała granicę między badaniem a manipulacją.</p>
+          <span class="crisis-scale">EKSPERYMENT BEZ ZGODY · 689K UŻYTKOWNIKÓW</span>
+        </div>
+
+        <div class="crisis-box">
+          <div class="crisis-year">🔴 KRYZYS · 2010</div>
+          <h4>Google Wi-Spy — Street View zbiera hasła</h4>
+          <p>Samochody Street View zbierały nieszyfrowane pakiety danych z sieci Wi-Fi — w tym e-maile, hasła i historię przeglądania. Google przyznało się do procederu w 30+ krajach. Kary łącznie 7 mln USD. Niemcy nakazały zniszczenie zebranych danych.</p>
+          <span class="crisis-scale">30+ KRAJÓW · DANE OSOBOWE I HASŁA</span>
+        </div>
+
+        <div class="fact-box" style="margin-top:14px;">
+          <div class="fact-lead">$279</div>
+          <p>tyle zarabia Meta rocznie na jednym użytkowniku w USA (ARPU 2023). Twoje dane są wycenione konkretnie.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SLIDE 4 — PRZECHOWYWANIE DANYCH
+═══════════════════════════════════════ -->
+<div class="slide slide-bg-4" id="s4">
+  <div class="slide-label">SLIDE <span>04</span> / 10</div>
+  <div class="slide-header">
+    <div class="slide-num">04</div>
+    <div class="slide-heading">
+      <div class="eyebrow">Etap III</div>
+      <h2>Przechowywanie Danych — gdzie i jak długo</h2>
+    </div>
+  </div>
+  <div class="slide-body">
+    <div class="grid-2" style="margin-bottom:20px;">
+      <div>
+        <div class="card green" style="margin-bottom:16px;">
+          <div class="card-icon">🏭</div>
+          <h3>Centra Danych — Infrastruktura</h3>
+          <p style="margin-bottom:10px;">Meta operuje 21 centrami danych na świecie, zużywając tyle energii co 3 miliony domów. Alphabet/Google — 35 centrów. Dane użytkowników mogą być replikowane w wielu lokalizacjach jednocześnie.</p>
+          <ul>
+            <li>Dane w USA podlegają CLOUD Act — rząd USA może żądać dostępu</li>
+            <li>Schrems II (2020) — unieważnił przekazywanie danych EU→USA</li>
+            <li>Kopie zapasowe mogą istnieć latami po „usunięciu" konta</li>
+          </ul>
+        </div>
+
+        <div class="warn-box">
+          <h4>⚠ Amazon AWS — Dostawca Dla Wszystkich</h4>
+          <p>Amazon Web Services hostuje dane rządów, szpitali, banków i startupów. W 2021 r. awaria AWS S3 (jednego regionu) wyłączyła setki serwisów globalnie na 6 godzin. Centralizacja = ryzyko systemowe.</p>
+        </div>
+      </div>
+
+      <div>
+        <div class="crisis-box" style="margin-bottom:14px;">
+          <div class="crisis-year">🔴 KRYZYS · 2021</div>
+          <h4>Facebook Data Leak — 533 mln rekordów</h4>
+          <p>Dane 533 milionów użytkowników z 106 krajów (w tym 3,2 mln Polaków) zostały publicznie opublikowane na forum hakerskim. Obejmowały numery telefonów, daty urodzenia, adresy e-mail i lokalizacje. Meta twierdziła, że dane są „stare" — ale numery telefonów się nie zmieniają.</p>
+          <span class="crisis-scale">533M UŻYTKOWNIKÓW · 106 KRAJÓW</span>
+        </div>
+
+        <div class="crisis-box">
+          <div class="crisis-year">🔴 KRYZYS · 2019</div>
+          <h4>Capital One — 100 mln rekordów (AWS)</h4>
+          <p>Były pracownik Amazon wykradł dane 106 mln klientów Capital One przechowywanych na AWS. Exploit pozwolił na pobranie danych z błędnie skonfigurowanego zasobu S3. Hacker skazany na 5 lat. Kara dla Capital One: 80 mln USD.</p>
+          <span class="crisis-scale">BŁĘDNA KONFIGURACJA CHMURY · 100M OFIAR</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-4">
+      <div class="fact-box">
+        <div class="fact-lead" style="font-size:28px;">72 GOD</div>
+        <p>RODO wymaga zgłoszenia naruszenia danych do organu w ciągu 72 godzin od wykrycia.</p>
+      </div>
+      <div class="fact-box">
+        <div class="fact-lead">10+</div>
+        <p>lat — tyle Meta przechowuje dane nawet po usunięciu konta (w kopiach zapasowych).</p>
+      </div>
+      <div class="fact-box">
+        <div class="fact-lead">4%</div>
+        <p>globalnych przychodów lub 20 mln EUR — maksymalna kara RODO za naruszenie bezpieczeństwa danych.</p>
+      </div>
+      <div class="fact-box">
+        <div class="fact-lead">1.3B</div>
+        <p>kara dla Meta od irlandzkiego DPC w 2023 r. — rekord w historii RODO (USD).</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SLIDE 5 — UDOSTĘPNIANIE DANYCH
+═══════════════════════════════════════ -->
+<div class="slide slide-bg-5" id="s5">
+  <div class="slide-label">SLIDE <span>05</span> / 10</div>
+  <div class="slide-header">
+    <div class="slide-num">05</div>
+    <div class="slide-heading">
+      <div class="eyebrow">Etap IV</div>
+      <h2>Udostępnianie Danych — brokerzy, rządy, reklamodawcy</h2>
+    </div>
+  </div>
+  <div class="slide-body">
+    <div class="grid-2">
+      <div>
+        <div class="card purple" style="margin-bottom:16px;">
+          <div class="card-icon">🏛️</div>
+          <h3>Afera Snowdena — NSA i PRISM</h3>
+          <p>W 2013 r. Edward Snowden ujawnił program PRISM — NSA miała bezpośredni dostęp do serwerów Google, Facebook, Microsoft, Apple, Yahoo i innych. Rząd USA zbierał dane miliardów ludzi na świecie. Snowden otrzymał azyl w Rosji. Debata: bohater czy zdrajca?</p>
+        </div>
+
+        <div class="card orange" style="margin-bottom:16px;">
+          <div class="card-icon">🔄</div>
+          <h3>Brokerzy Danych — Niewidzialni Handlarze</h3>
+          <ul>
+            <li>Acxiom posiada ~3000 danych punktów o każdym dorosłym Amerykaninie</li>
+            <li>LexisNexis sprzedaje dane policji i ubezpieczycielom</li>
+            <li>Clearview AI — 30 mld zdjęć twarzy zebranych bez zgody</li>
+            <li>Rynek brokerów danych wart 200+ mld USD rocznie</li>
+          </ul>
+        </div>
+
+        <div class="warn-box">
+          <h4>⚠ TikTok i Chiny — Gdzie Idą Twoje Dane?</h4>
+          <p>TikTok (ByteDance) w 2022 r. przyznał, że pracownicy w Chinach mieli dostęp do danych użytkowników z USA i Europy. Kongres USA rozważa ban. Indie już go nałożyły. Dane biometryczne z facefiltrów — nieznany los.</p>
+        </div>
+      </div>
+
+      <div>
+        <div class="crisis-box" style="margin-bottom:14px;">
+          <div class="crisis-year">🔴 KRYZYS · 2013</div>
+          <h4>PRISM — Inwigilacja na Skalę Globalną</h4>
+          <p>Program PRISM Agencji Bezpieczeństwa Narodowego USA umożliwiał masową inwigilację komunikacji elektronicznej na całym świecie. Dzięki Snowdenowi dowiedzieliśmy się, że żaden e-mail, rozmowa telefoniczna ani wiadomość nie jest prywatna. Reforma FISA Act trwała 6 lat.</p>
+          <span class="crisis-scale">MILIARD UŻYTKOWNIKÓW · NSA + GCHQ</span>
+        </div>
+
+        <div class="crisis-box" style="margin-bottom:14px;">
+          <div class="crisis-year">🔴 KRYZYS · 2022</div>
+          <h4>Clearview AI — Baza Twarzy bez Zgody</h4>
+          <p>Australijska, kanadyjska i europejska komisja ds. prywatności nałożyła kary na Clearview AI za budowę bazy 30 miliardów zdjęć twarzy ze stron społecznościowych bez zgody. Technika używana przez 3100 agencji policji. Polska UODO wszczęła postępowanie.</p>
+          <span class="crisis-scale">30 MLD TWARZY · BEZPRAWNA BIOMETRIA</span>
+        </div>
+
+        <div class="fact-box">
+          <div class="fact-lead">$0.001</div>
+          <p>tyle zarabia broker danych na jednym rekordzie osobowym. Twoje życie jest sprzedawane za ułamek grosza.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SLIDE 6 — ARCHIWIZACJA I USUWANIE
+═══════════════════════════════════════ -->
+<div class="slide slide-bg-1" id="s6">
+  <div class="slide-label">SLIDE <span>06</span> / 10</div>
+  <div class="slide-header">
+    <div class="slide-num">06</div>
+    <div class="slide-heading">
+      <div class="eyebrow">Etap V–VI</div>
+      <h2>Archiwizacja i Usuwanie — czy dane naprawdę znikają?</h2>
+    </div>
+  </div>
+  <div class="slide-body">
+    <div class="grid-2" style="margin-bottom:20px;">
+      <div>
+        <div class="card red" style="margin-bottom:16px;">
+          <div class="card-icon">🗂️</div>
+          <h3>„Prawo do Bycia Zapomnianym"</h3>
+          <p style="margin-bottom:10px;">Artykuł 17 RODO przyznaje Europejczykom prawo do żądania usunięcia danych. Google musi usuwać linki z wyników wyszukiwania na wniosek. Od 2014 r. przetworzono ponad 5 mln wniosków. Problem: dane w kopiach zapasowych i bazach danych partnerów.</p>
+        </div>
+
+        <div class="warn-box" style="margin-bottom:14px;">
+          <h4>⚠ Konto Usunięte ≠ Dane Usunięte</h4>
+          <p>Po usunięciu konta Facebook dane mogą pozostawać w systemach przez 90 dni (oficjalnie), ale kopie zapasowe i dane u partnerów reklamowych mogą istnieć latami. Instagram po usunięciu konta przechowuje fotografie na CDN przez niezdefiniowany czas.</p>
+        </div>
+
+        <div class="fact-box">
+          <div class="fact-lead">5M+</div>
+          <p>wniosków „prawo do bycia zapomnianym" złożonych do Google od 2014 roku. Tylko 47% zostało uwzględnionych.</p>
+        </div>
+      </div>
+
+      <div>
+        <table class="archive-table">
+          <thead>
+            <tr>
+              <th>Firma</th>
+              <th>Co przechowuje po usunięciu</th>
+              <th>Jak długo</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Meta</td>
+              <td>Dane konta, logi aktywności, kopie zapasowe</td>
+              <td>90 dni oficjalnie, lata w backup</td>
+              <td><span class="badge badge-red">Ryzyko</span></td>
+            </tr>
+            <tr>
+              <td>Google</td>
+              <td>Historia wyszukiwań, e-maile, lokalizacja</td>
+              <td>Do 18 miesięcy (konfigurowalnie)</td>
+              <td><span class="badge badge-orange">Częściowo</span></td>
+            </tr>
+            <tr>
+              <td>Amazon</td>
+              <td>Historia zakupów, nagrania Alexy, dane głosowe</td>
+              <td>Nieokreślony czas</td>
+              <td><span class="badge badge-red">Ryzyko</span></td>
+            </tr>
+            <tr>
+              <td>Apple</td>
+              <td>iCloud backup, dane zdrowotne (HealthKit)</td>
+              <td>30 dni po usunięciu konta</td>
+              <td><span class="badge badge-green">Lepiej</span></td>
+            </tr>
+            <tr>
+              <td>TikTok</td>
+              <td>Dane biometryczne, wzorce zachowań</td>
+              <td>Brak precyzyjnych informacji</td>
+              <td><span class="badge badge-red">Niejasne</span></td>
+            </tr>
+            <tr>
+              <td>Twitter/X</td>
+              <td>Tweety (nawet prywatne), dane analityczne</td>
+              <td>30 dni + backup</td>
+              <td><span class="badge badge-orange">Zmienione</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SLIDE 7 — RYZYKO UŻYTKOWNIKA
+═══════════════════════════════════════ -->
+<div class="slide slide-bg-2" id="s7">
+  <div class="slide-label">SLIDE <span>07</span> / 10</div>
+  <div class="slide-header">
+    <div class="slide-num">07</div>
+    <div class="slide-heading">
+      <div class="eyebrow">Analiza Ryzyka</div>
+      <h2>Ryzyko Użytkownika — konkretne zagrożenia</h2>
+    </div>
+  </div>
+  <div class="slide-body">
+    <div class="grid-2" style="gap:24px;">
+      <div>
+        <p style="font-size:11px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;">Poziom ryzyka według kategorii</p>
+
+        <div class="risk-row">
+          <span class="risk-label">Kradzież tożsamości</span>
+          <div class="risk-bar-wrap"><div class="risk-bar" style="width:92%;background:linear-gradient(90deg,#e63946,#e63946cc);"></div></div>
+          <span class="risk-val" style="color:var(--accent);">92%</span>
+        </div>
+        <div class="risk-row">
+          <span class="risk-label">Manipulacja reklamowa</span>
+          <div class="risk-bar-wrap"><div class="risk-bar" style="width:98%;background:linear-gradient(90deg,#e63946,#f4a261);"></div></div>
+          <span class="risk-val" style="color:var(--accent);">98%</span>
+        </div>
+        <div class="risk-row">
+          <span class="risk-label">Doxxing / ujawnienie</span>
+          <div class="risk-bar-wrap"><div class="risk-bar" style="width:65%;background:linear-gradient(90deg,#f4a261,#f4a261cc);"></div></div>
+          <span class="risk-val" style="color:var(--accent3);">65%</span>
+        </div>
+        <div class="risk-row">
+          <span class="risk-label">Deepfake / AI abuse</span>
+          <div class="risk-bar-wrap"><div class="risk-bar" style="width:78%;background:linear-gradient(90deg,#e63946,#7b2d8b);"></div></div>
+          <span class="risk-val" style="color:var(--purple);">78%</span>
+        </div>
+        <div class="risk-row">
+          <span class="risk-label">Inwigilacja rządowa</span>
+          <div class="risk-bar-wrap"><div class="risk-bar" style="width:55%;background:linear-gradient(90deg,#457b9d,#457b9dcc);"></div></div>
+          <span class="risk-val" style="color:var(--accent2);">55%</span>
+        </div>
+        <div class="risk-row">
+          <span class="risk-label">Dyskryminacja algorytmiczna</span>
+          <div class="risk-bar-wrap"><div class="risk-bar" style="width:70%;background:linear-gradient(90deg,#e9c46a,#e9c46acc);"></div></div>
+          <span class="risk-val" style="color:var(--gold);">70%</span>
+        </div>
+        <div class="risk-row">
+          <span class="risk-label">Phishing / socjotechnika</span>
+          <div class="risk-bar-wrap"><div class="risk-bar" style="width:88%;background:linear-gradient(90deg,#e63946,#e63946cc);"></div></div>
+          <span class="risk-val" style="color:var(--accent);">88%</span>
+        </div>
+
+        <div style="margin-top:6px;font-size:10px;color:var(--text-dim);">* % użytkowników narażonych lub dotkniętych ryzykiem globalnie</div>
+      </div>
+
+      <div>
+        <div class="card red" style="margin-bottom:14px;">
+          <div class="card-icon">🎯</div>
+          <h3>Mikrotargetowanie Polityczne</h3>
+          <p>Twój profil psychograficzny może być używany do pokazywania Ci specjalnie dobranych dezinformacji. Brexit: 10 tys. różnych wariantów reklam testowanych na segmentach wyborców. Manipulacja nie wygląda jak manipulacja.</p>
+        </div>
+
+        <div class="card purple" style="margin-bottom:14px;">
+          <div class="card-icon">👁️</div>
+          <h3>Scoring i Dyskryminacja</h3>
+          <p>Ubezpieczyciele używają danych z mediów społecznościowych do oceny ryzyka. Chiny — Social Credit System. Banki odmawiają kredytów na podstawie algorytmów trenowanych na danych historycznie dyskryminacyjnych.</p>
+        </div>
+
+        <div class="card orange">
+          <div class="card-icon">🤖</div>
+          <h3>Deepfake i Klonowanie Głosu</h3>
+          <p>3 sekundy nagrania wystarczą do sklonowania głosu (ElevenLabs). Twoje zdjęcia z Instagrama mogą posłużyć do stworzenia deepfake. W 2023 r. 96% deepfake to pornografia — głównie kobiet bez ich zgody.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SLIDE 8 — GDPR / RODO I REGULACJE
+═══════════════════════════════════════ -->
+<div class="slide slide-bg-3" id="s8">
+  <div class="slide-label">SLIDE <span>08</span> / 10</div>
+  <div class="slide-header">
+    <div class="slide-num">08</div>
+    <div class="slide-heading">
+      <div class="eyebrow">Regulacje</div>
+      <h2>RODO, Regulatorzy i Realia Egzekwowania</h2>
+    </div>
+  </div>
+  <div class="slide-body">
+    <div class="grid-2">
+      <div>
+        <p style="font-size:11px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px;">7 Zasad RODO</p>
+        <div class="gdpr-principle">
+          <div class="gdpr-num">1</div>
+          <div class="gdpr-text"><h4>Zgodność z prawem, rzetelność, przejrzystość</h4><p>Przetwarzanie wymaga podstawy prawnej — zgoda, umowa, obowiązek prawny lub uzasadniony interes.</p></div>
+        </div>
+        <div class="gdpr-principle">
+          <div class="gdpr-num">2</div>
+          <div class="gdpr-text"><h4>Ograniczenie celu</h4><p>Dane mogą być zbierane wyłącznie w określonym, jasnym celu. Zmiany wymagają nowej zgody.</p></div>
+        </div>
+        <div class="gdpr-principle">
+          <div class="gdpr-num">3</div>
+          <div class="gdpr-text"><h4>Minimalizacja danych</h4><p>Zbierz tyle ile niezbędne — nie więcej. „Na wszelki wypadek" nie jest podstawą prawną.</p></div>
+        </div>
+        <div class="gdpr-principle">
+          <div class="gdpr-num">4</div>
+          <div class="gdpr-text"><h4>Prawidłowość</h4><p>Dane muszą być dokładne i aktualne. Użytkownik ma prawo do korekty.</p></div>
+        </div>
+        <div class="gdpr-principle">
+          <div class="gdpr-num">5</div>
+          <div class="gdpr-text"><h4>Ograniczenie przechowywania</h4><p>Nie dłużej niż to konieczne do realizacji celu. Dane „na zawsze" = naruszenie.</p></div>
+        </div>
+        <div class="gdpr-principle">
+          <div class="gdpr-num">6</div>
+          <div class="gdpr-text"><h4>Integralność i poufność</h4><p>Dane muszą być chronione przed nieuprawnionym dostępem i przypadkową utratą.</p></div>
+        </div>
+        <div class="gdpr-principle" style="border:none;">
+          <div class="gdpr-num">7</div>
+          <div class="gdpr-text"><h4>Rozliczalność</h4><p>Administrator musi być w stanie udowodnić przestrzeganie zasad — dokumentacja, polityki, audyty.</p></div>
+        </div>
+      </div>
+
+      <div>
+        <p style="font-size:11px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px;">Największe Kary RODO</p>
+
+        <div class="timeline">
+          <div class="tl-item">
+            <div class="tl-year">2023 · 1,2 MLD EUR</div>
+            <div class="tl-text"><strong>Meta (Irlandia/DPC)</strong> — transfer danych EU→USA niezgodny z RODO. Rekord wszech czasów. Meta zaskarżyła decyzję.</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-year">2021 · 746 MLN EUR</div>
+            <div class="tl-text"><strong>Amazon (Luksemburg)</strong> — targeted advertising bez odpowiedniej zgody. Amazon odwołał się. Sprawa trwa.</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-year">2019 · 50 MLN EUR</div>
+            <div class="tl-text"><strong>Google (Francja/CNIL)</strong> — pierwsza duża kara RODO. Brak przejrzystości w zarządzaniu zgodami.</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-year">2022 · 405 MLN EUR</div>
+            <div class="tl-text"><strong>Instagram/Meta (Irlandia)</strong> — przetwarzanie danych dzieci. Konta nieletnich były domyślnie publiczne.</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-year">2023 · 345 MLN EUR</div>
+            <div class="tl-text"><strong>TikTok (Irlandia/DPC)</strong> — nielegalne przetwarzanie danych dzieci poniżej 13 roku życia.</div>
+          </div>
+        </div>
+
+        <div class="fact-box" style="margin-top:16px;">
+          <div class="fact-lead">€4.5B</div>
+          <p>łączna wartość kar RODO nałożonych od 2018 do 2024 roku. Tempo rośnie rok do roku o ~40%.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SLIDE 9 — CIEKAWOSTKI
+═══════════════════════════════════════ -->
+<div class="slide slide-bg-4" id="s9">
+  <div class="slide-label">SLIDE <span>09</span> / 10</div>
+  <div class="slide-header">
+    <div class="slide-num">09</div>
+    <div class="slide-heading">
+      <div class="eyebrow">Ciekawostki</div>
+      <h2>Fakty, Które Powinny Cię Zaskoczyć</h2>
+    </div>
+  </div>
+  <div class="slide-body">
+    <div class="grid-2" style="margin-bottom:20px;">
+      <div>
+        <div class="crisis-box" style="border-left-color:var(--gold);background:rgba(233,196,106,0.06);border-color:rgba(233,196,106,0.3);">
+          <div class="crisis-year" style="color:var(--gold);">🌟 CIEKAWOSTKA</div>
+          <h4>„Incognito" ≠ Anonimowość</h4>
+          <p>Tryb incognito w Chrome ukrywa historię przeglądania tylko przed innymi użytkownikami komputera. Google, dostawca internetu, sieć Wi-Fi i wszystkie odwiedzane strony nadal widzą Twój adres IP i aktywność. W 2023 r. Google zapłacił 5 mld USD w ugodzie zbiorowej za śledzenie użytkowników incognito.</p>
+        </div>
+
+        <div class="crisis-box" style="border-left-color:var(--accent2);background:rgba(69,123,157,0.06);border-color:rgba(69,123,157,0.3);margin-top:14px;">
+          <div class="crisis-year" style="color:var(--accent2);">🌟 CIEKAWOSTKA</div>
+          <h4>Twój Telefon Wie, Że Śpisz</h4>
+          <p>Apple Watch i smartfony z akcelerometrem śledzą fazy snu — dane zdrowotne, które mogą być sprzedane ubezpieczycielom. Polityka Fitbit (Google) pozwala na użycie danych do „ulepszania usług" — co może oznaczać trening modeli AI na Twoich danych zdrowotnych.</p>
+        </div>
+
+        <div class="crisis-box" style="border-left-color:var(--green);background:rgba(42,157,143,0.06);border-color:rgba(42,157,143,0.3);margin-top:14px;">
+          <div class="crisis-year" style="color:var(--green);">🌟 CIEKAWOSTKA</div>
+          <h4>23andMe — DNA na Sprzedaż</h4>
+          <p>W 2023 r. firma 23andMe (testy DNA) padła ofiarą wycieku danych — ujawniono dane genetyczne 6,9 mln użytkowników, w tym historię przodków i predyspozycje zdrowotne. DNA jest niezmienne — nie możesz „zmienić hasła" do swojego genomu. W 2024 firma ogłosiła bankructwo.</p>
+        </div>
+      </div>
+
+      <div>
+        <div class="grid-2" style="gap:12px;margin-bottom:14px;">
+          <div class="fact-box">
+            <div class="fact-lead">53%</div>
+            <p>Europejczyków nie czyta polityki prywatności przed zaakceptowaniem. Średnia polisa PP ma 9000 słów.</p>
+          </div>
+          <div class="fact-box">
+            <div class="fact-lead">76h</div>
+            <p>tyle zajęłoby przeczytanie wszystkich polityk prywatności serwisów, których używasz przez rok.</p>
+          </div>
+          <div class="fact-box">
+            <div class="fact-lead">3000</div>
+            <p>punktów danych o każdym Amerykaninie posiada broker Acxiom — w tym dane o kredytach, zdrowiu, religii.</p>
+          </div>
+          <div class="fact-box">
+            <div class="fact-lead">$0</div>
+            <p>tyle zarabia przeciętny użytkownik za swoje dane, które Meta sprzedaje za setki dolarów rocznie.</p>
+          </div>
+        </div>
+
+        <div class="warn-box">
+          <h4>⚠ Metadane Mówią Więcej niż Treść</h4>
+          <p>General Michael Hayden (b. szef NSA): „Zabijamy ludzi na podstawie metadanych." Kto, kiedy, skąd dzwoni i jak długo rozmawia — to wystarczy do profilowania politycznego, zdrowotnego i religijnego. NSA zbiera metadane każdej rozmowy w USA.</p>
+        </div>
+
+        <div class="quote-block">
+          <blockquote>„Argument, że nie masz nic do ukrycia, zakłada, że władza nie nadużyje swoich uprawnień."</blockquote>
+          <cite>— Edward Snowden</cite>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SLIDE 10 — BIBLIOGRAFIA I AUTOR
+═══════════════════════════════════════ -->
+<div class="slide slide-bg-1" id="s10">
+  <div class="slide-label">SLIDE <span>10</span> / 10</div>
+  <div class="slide-header">
+    <div class="slide-num">10</div>
+    <div class="slide-heading">
+      <div class="eyebrow">Źródła i Autor</div>
+      <h2>Bibliografia</h2>
+    </div>
+  </div>
+  <div class="slide-body" style="padding-bottom:100px;">
+    <div class="grid-2" style="gap:28px;align-items:start;">
+
+      <!-- LEWA KOLUMNA — ŹRÓDŁA -->
+      <div>
+        <p style="font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--accent);margin-bottom:14px;">Źródła według tematów</p>
+
+        <!-- Wolumen danych -->
+        <div style="margin-bottom:18px;">
+          <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid rgba(233,196,106,0.2);">📊 Wolumen i wzrost danych</div>
+          <div class="bib-entry">
+            <span class="bib-num">[1]</span>
+            <div>
+              <span class="bib-title">IDC Global DataSphere Forecast 2022–2026</span><br>
+              <span class="bib-meta">IDC (International Data Corporation), raport „Worldwide Global DataSphere Forecast, 2022–2026", IDC #US49018922, 2022. Prognoza wzrostu do 221 ZB do 2026 r.</span><br>
+              <a class="bib-url" href="https://www.idc.com/getdoc.jsp?containerId=US49018922" target="_blank">idc.com → DataSphere Forecast</a>
+            </div>
+          </div>
+          <div class="bib-entry">
+            <span class="bib-num">[2]</span>
+            <div>
+              <span class="bib-title">Statista — Volume of data/information created worldwide 2010–2025</span><br>
+              <span class="bib-meta">Statista Research Department, dane historyczne i prognozy wolumenu danych (w zettabajtach), aktualizacja 2023.</span><br>
+              <a class="bib-url" href="https://www.statista.com/statistics/871513/worldwide-data-created/" target="_blank">statista.com → worldwide-data-created</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Prawo do bycia zapomnianym -->
+        <div style="margin-bottom:18px;">
+          <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid rgba(233,196,106,0.2);">🗑️ Prawo do bycia zapomnianym</div>
+          <div class="bib-entry">
+            <span class="bib-num">[3]</span>
+            <div>
+              <span class="bib-title">Google Transparency Report — Requests to delist content under European privacy law</span><br>
+              <span class="bib-meta">Google LLC, raport przejrzystości aktualizowany kwartalnie. Zawiera łączną liczbę wniosków (5+ mln), procent uwzględnionych (ok. 47%), top domeny wnioskujące.</span><br>
+              <a class="bib-url" href="https://transparencyreport.google.com/eu-privacy/overview" target="_blank">transparencyreport.google.com → eu-privacy</a>
+            </div>
+          </div>
+          <div class="bib-entry">
+            <span class="bib-num">[4]</span>
+            <div>
+              <span class="bib-title">TSUE — Sprawa C-131/12, Google Spain SL v. AEPD (2014)</span><br>
+              <span class="bib-meta">Trybunał Sprawiedliwości UE, wyrok z 13 maja 2014 r. — pionierski wyrok ustanawiający „prawo do bycia zapomnianym" w UE dla wyszukiwarek internetowych.</span><br>
+              <a class="bib-url" href="https://curia.europa.eu/juris/document/document.jsf?docid=152065" target="_blank">curia.europa.eu → C-131/12</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cambridge Analytica -->
+        <div style="margin-bottom:18px;">
+          <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid rgba(233,196,106,0.2);">🔴 Cambridge Analytica / Meta</div>
+          <div class="bib-entry">
+            <span class="bib-num">[5]</span>
+            <div>
+              <span class="bib-title">FTC Press Release — FTC Imposes $5 Billion Penalty on Facebook (2019)</span><br>
+              <span class="bib-meta">Federal Trade Commission, komunikat prasowy z 24 lipca 2019 r. Szczegóły ugody, zakres naruszenia (87 mln użytkowników), warunki nakazu zgody.</span><br>
+              <a class="bib-url" href="https://www.ftc.gov/news-events/news/press-releases/2019/07/ftc-imposes-5-billion-penalty-sweeping-new-privacy-restrictions-facebook" target="_blank">ftc.gov → facebook-5-billion-penalty</a>
+            </div>
+          </div>
+          <div class="bib-entry">
+            <span class="bib-num">[6]</span>
+            <div>
+              <span class="bib-title">Cadwalladr, C. &amp; Graham-Harrison, E. — „Revealed: 50 million Facebook profiles harvested"</span><br>
+              <span class="bib-meta">The Guardian / The Observer, 17 marca 2018 r. Pierwotne śledztwo dziennikarskie ujawniające skalę afery Cambridge Analytica.</span><br>
+              <a class="bib-url" href="https://www.theguardian.com/news/2018/mar/17/cambridge-analytica-facebook-influence-us-election" target="_blank">theguardian.com → cambridge-analytica-facebook</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PRAWA KOLUMNA — DALSZE ŹRÓDŁA + AUTOR -->
+      <div>
+        <!-- GDPR / kary -->
+        <div style="margin-bottom:18px;">
+          <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid rgba(233,196,106,0.2);">⚖️ RODO i kary regulacyjne</div>
+          <div class="bib-entry">
+            <span class="bib-num">[7]</span>
+            <div>
+              <span class="bib-title">GDPR Enforcement Tracker — CMS Law</span><br>
+              <span class="bib-meta">CMS Law, baza danych kar RODO aktualizowana na bieżąco. Źródło danych o karach: Meta 1,2 mld EUR (maj 2023), Amazon 746 mln EUR (lipiec 2021), Google 50 mln EUR (2019).</span><br>
+              <a class="bib-url" href="https://www.enforcementtracker.com" target="_blank">enforcementtracker.com</a>
+            </div>
+          </div>
+          <div class="bib-entry">
+            <span class="bib-num">[8]</span>
+            <div>
+              <span class="bib-title">Rozporządzenie (UE) 2016/679 — RODO (pełna treść)</span><br>
+              <span class="bib-meta">Parlament Europejski i Rada UE, 27 kwietnia 2016 r. Oficjalny tekst rozporządzenia w Dzienniku Urzędowym UE L 119/1.</span><br>
+              <a class="bib-url" href="https://eur-lex.europa.eu/legal-content/PL/TXT/?uri=CELEX%3A32016R0679" target="_blank">eur-lex.europa.eu → RODO (PL)</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Wycieki i bezpieczeństwo -->
+        <div style="margin-bottom:18px;">
+          <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid rgba(233,196,106,0.2);">🔓 Wycieki danych i bezpieczeństwo</div>
+          <div class="bib-entry">
+            <span class="bib-num">[9]</span>
+            <div>
+              <span class="bib-title">Have I Been Pwned — Troy Hunt, baza wycieków danych</span><br>
+              <span class="bib-meta">Platforma monitorowania wycieków danych, zawiera m.in. wyciek Facebooka z 2021 r. (533 mln rekordów). Dane historyczne i statystyki naruszeń.</span><br>
+              <a class="bib-url" href="https://haveibeenpwned.com" target="_blank">haveibeenpwned.com</a>
+            </div>
+          </div>
+          <div class="bib-entry">
+            <span class="bib-num">[10]</span>
+            <div>
+              <span class="bib-title">Greenwald, G. — „No Place to Hide: Edward Snowden, the NSA, and the U.S. Surveillance State"</span><br>
+              <span class="bib-meta">Metropolitan Books, 2014. ISBN 978-1627790734. Kluczowe źródło dotyczące programu PRISM i zakresu inwigilacji NSA.</span>
+            </div>
+          </div>
+          <div class="bib-entry">
+            <span class="bib-num">[11]</span>
+            <div>
+              <span class="bib-title">Kosinski, M., Stillwell, D., Graepel, T. — „Private traits and attributes are predictable from digital records of human behavior"</span><br>
+              <span class="bib-meta">PNAS, vol. 110, nr 15, 2013. Badanie stanowiące naukową podstawę modelu psychograficznego OCEAN stosowanego przez Cambridge Analytica.</span><br>
+              <a class="bib-url" href="https://www.pnas.org/doi/10.1073/pnas.1218772110" target="_blank">pnas.org → 1218772110</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- AUTOR -->
+        <div style="
+          background: var(--surface2);
+          border: 1px solid var(--border);
+          border-top: 2px solid var(--accent);
+          border-radius: 8px;
+          padding: 20px 22px;
+          margin-top: 6px;
+        ">
+          <div style="font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--accent);margin-bottom:14px;">Autor Prezentacji</div>
+          <div style="display:flex;align-items:center;gap:16px;">
+            <div style="
+              width:52px;height:52px;border-radius:50%;
+              background:var(--surface);
+              border:2px dashed rgba(255,255,255,0.15);
+              display:flex;align-items:center;justify-content:center;
+              font-size:22px;flex-shrink:0;
+            ">👤</div>
+            <div>
+              <div style="
+                font-family:'Bebas Neue',sans-serif;
+                font-size:22px;letter-spacing:2px;
+                color:var(--text);margin-bottom:2px;
+              ">Michał Kłębukowski</div>
+              <div style="font-size:11px;color:var(--text-dim);letter-spacing:1px;">22IiE</div>
+            </div>
+          </div>
+          <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);font-size:10px;color:var(--text-dim);letter-spacing:1px;line-height:1.6;">
+            Prezentacja przygotowana w ramach zajęć:<br>
+            <span style="color:var(--text);">Przetwarzanie i Wizualizacja Danych</span><br>
+            <span style="color:var(--text-dim);">22.03.2026r.</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- end slides-container -->
+
+<!-- ─── NAVIGATION ─── -->
+<div id="nav">
+  <button onclick="changeSlide(-1)">◀ PREV</button>
+  <div class="dot-nav" id="dot-nav"></div>
+  <span id="slide-counter">01 / 10</span>
+  <button onclick="changeSlide(1)">NEXT ▶</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let current = 0;
+
+  // Build dots
+  const dotNav = document.getElementById('dot-nav');
+  slides.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.onclick = () => goTo(i);
+    dotNav.appendChild(d);
+  });
+
+  function goTo(n) {
+    slides[current].classList.remove('active');
+    current = Math.max(0, Math.min(n, total - 1));
+    slides[current].classList.add('active');
+    document.querySelectorAll('.dot').forEach((d,i) => d.classList.toggle('active', i === current));
+    document.getElementById('slide-counter').textContent =
+      String(current + 1).padStart(2,'0') + ' / ' + String(total).padStart(2,'0');
+    document.getElementById('progress-bar').style.width =
+      ((current + 1) / total * 100) + '%';
+  }
+
+  function changeSlide(dir) { goTo(current + dir); }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') changeSlide(1);
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') changeSlide(-1);
+  });
+
+  // Touch swipe
+  let touchX = 0;
+  document.addEventListener('touchstart', e => touchX = e.touches[0].clientX);
+  document.addEventListener('touchend', e => {
+    const dx = touchX - e.changedTouches[0].clientX;
+    if (Math.abs(dx) > 50) changeSlide(dx > 0 ? 1 : -1);
+  });
+
+  // Init progress bar
+  document.getElementById('progress-bar').style.width = (1/total*100) + '%';
+</script>
+</body>
+</html>
