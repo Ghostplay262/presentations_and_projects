@@ -1,0 +1,1484 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Metody obsługi braków danych</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080c16;
+    --bg2: #0f1623;
+    --bg3: #161d2e;
+    --card: #111827;
+    --border: #1e2d45;
+    --accent: #00c8ef;
+    --accent2: #6d28d9;
+    --accent3: #10b981;
+    --accent4: #f59e0b;
+    --danger: #ef4444;
+    --text: #dde4f0;
+    --muted: #64748b;
+    --dim: #374151;
+    --serif: 'Libre Baskerville', Georgia, serif;
+    --sans: 'IBM Plex Sans', sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,200,239,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,200,239,0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Radial glow */
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse 70% 60% at 50% 50%, rgba(0,100,150,0.08) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ─── SLIDES ─────────────────────────────────────────── */
+  .deck {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .slide {
+    display: none;
+    position: absolute; inset: 0;
+    flex-direction: column;
+    padding: 0;
+    animation: slideIn 0.45s cubic-bezier(0.22,1,0.36,1);
+  }
+  .slide.active { display: flex; }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ─── LAYOUT WRAPPERS ───────────────────────────────── */
+  .slide-inner {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 48px 64px 32px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  /* ─── HEADER BAR ────────────────────────────────────── */
+  .header-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 64px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(8,12,22,0.8);
+    backdrop-filter: blur(8px);
+    flex-shrink: 0;
+  }
+  .header-bar .label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .header-bar .slide-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+  }
+
+  /* ─── PROGRESS ──────────────────────────────────────── */
+  .progress-bar {
+    height: 2px;
+    background: var(--border);
+    flex-shrink: 0;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+    transition: width 0.4s ease;
+  }
+
+  /* ─── TYPOGRAPHY ────────────────────────────────────── */
+  .slide-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  h1 {
+    font-family: var(--serif);
+    font-size: clamp(2rem, 4.5vw, 3.6rem);
+    font-weight: 700;
+    line-height: 1.15;
+    color: #fff;
+    margin-bottom: 20px;
+  }
+  h1 em { color: var(--accent); font-style: italic; }
+
+  h2 {
+    font-family: var(--serif);
+    font-size: clamp(1.5rem, 3vw, 2.4rem);
+    font-weight: 700;
+    line-height: 1.2;
+    color: #fff;
+    margin-bottom: 24px;
+  }
+  h2 .accent { color: var(--accent); }
+
+  h3 {
+    font-family: var(--sans);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+    margin-bottom: 8px;
+  }
+
+  p {
+    font-size: 0.95rem;
+    line-height: 1.75;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+  p.lead {
+    font-size: 1.1rem;
+    line-height: 1.8;
+    color: #adbdd4;
+  }
+
+  /* ─── GRID LAYOUTS ──────────────────────────────────── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
+  .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 14px; }
+
+  /* ─── CARDS ─────────────────────────────────────────── */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 22px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .card.cyan::before  { background: linear-gradient(90deg, var(--accent), transparent); }
+  .card.violet::before { background: linear-gradient(90deg, var(--accent2), transparent); }
+  .card.green::before  { background: linear-gradient(90deg, var(--accent3), transparent); }
+  .card.amber::before  { background: linear-gradient(90deg, var(--accent4), transparent); }
+  .card.red::before    { background: linear-gradient(90deg, var(--danger), transparent); }
+
+  /* ─── BADGES / TAGS ─────────────────────────────────── */
+  .badge {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 3px 9px;
+    border-radius: 4px;
+    letter-spacing: 0.08em;
+    font-weight: 500;
+    margin-bottom: 10px;
+  }
+  .badge.cyan   { background: rgba(0,200,239,0.12); color: var(--accent); border: 1px solid rgba(0,200,239,0.25); }
+  .badge.violet { background: rgba(109,40,217,0.15); color: #a78bfa; border: 1px solid rgba(109,40,217,0.3); }
+  .badge.green  { background: rgba(16,185,129,0.12); color: #34d399; border: 1px solid rgba(16,185,129,0.25); }
+  .badge.amber  { background: rgba(245,158,11,0.12); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
+  .badge.red    { background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.25); }
+
+  /* ─── LISTS ─────────────────────────────────────────── */
+  ul.styled, ol.styled {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+  ul.styled li, ol.styled li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: #adbdd4;
+  }
+  ul.styled li::before {
+    content: '▸';
+    color: var(--accent);
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  ol.styled { counter-reset: li; }
+  ol.styled li::before {
+    counter-increment: li;
+    content: counter(li, decimal-leading-zero);
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent);
+    background: rgba(0,200,239,0.1);
+    border: 1px solid rgba(0,200,239,0.2);
+    border-radius: 4px;
+    padding: 2px 6px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  /* ─── TABLE ─────────────────────────────────────────── */
+  table.comp {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+  table.comp th {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  table.comp td {
+    padding: 9px 12px;
+    border-bottom: 1px solid rgba(30,45,69,0.5);
+    color: #9dafc4;
+    vertical-align: top;
+    line-height: 1.5;
+  }
+  table.comp td:first-child {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--accent);
+  }
+  table.comp tr:hover td { background: rgba(0,200,239,0.04); }
+
+  /* ─── HIGHLIGHT BOXES ────────────────────────────────── */
+  .callout {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    background: rgba(0,200,239,0.06);
+    border: 1px solid rgba(0,200,239,0.18);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 0.88rem;
+    line-height: 1.65;
+    color: #9fcedf;
+  }
+  .callout .icon { font-size: 1.1rem; flex-shrink: 0; }
+  .callout.warn {
+    background: rgba(245,158,11,0.07);
+    border-color: rgba(245,158,11,0.2);
+    color: #c8a74a;
+  }
+  .callout.success {
+    background: rgba(16,185,129,0.07);
+    border-color: rgba(16,185,129,0.2);
+    color: #5ab899;
+  }
+  .callout.danger {
+    background: rgba(239,68,68,0.07);
+    border-color: rgba(239,68,68,0.2);
+    color: #bf7070;
+  }
+
+  /* ─── CODE ───────────────────────────────────────────── */
+  .code-block {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: #7ec8e3;
+    line-height: 1.7;
+  }
+  .code-block .cm { color: var(--muted); }
+  .code-block .kw { color: #c792ea; }
+  .code-block .fn { color: #82aaff; }
+  .code-block .st { color: #c3e88d; }
+  .code-block .nm { color: #f78c6c; }
+
+  /* ─── FORMULA ────────────────────────────────────────── */
+  .formula {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    color: #7ec8e3;
+    background: rgba(0,0,0,0.35);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 16px;
+    text-align: center;
+    letter-spacing: 0.04em;
+  }
+
+  /* ─── STAT BOX ───────────────────────────────────────── */
+  .stat-box {
+    text-align: center;
+    padding: 18px 12px;
+  }
+  .stat-box .num {
+    font-family: var(--mono);
+    font-size: clamp(1.8rem, 3vw, 2.8rem);
+    font-weight: 500;
+    color: var(--accent);
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .stat-box .lbl {
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  /* ─── TIMELINE ───────────────────────────────────────── */
+  .timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .timeline-item {
+    display: flex;
+    gap: 18px;
+    position: relative;
+  }
+  .timeline-item:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: 14px;
+    top: 28px;
+    bottom: -6px;
+    width: 1px;
+    background: var(--border);
+  }
+  .timeline-dot {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--bg3);
+    border: 2px solid var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent);
+    margin-top: 2px;
+  }
+  .timeline-content { flex: 1; padding-bottom: 18px; }
+  .timeline-content h4 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 5px;
+  }
+  .timeline-content p { font-size: 0.83rem; color: #7a8fa8; margin: 0; line-height: 1.55; }
+
+  /* ─── DIVIDER ────────────────────────────────────────── */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 20px 0;
+  }
+
+  /* ─── NAV ────────────────────────────────────────────── */
+  .nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 64px;
+    border-top: 1px solid var(--border);
+    background: rgba(8,12,22,0.85);
+    backdrop-filter: blur(8px);
+    flex-shrink: 0;
+    gap: 20px;
+  }
+  .nav-dots {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    max-width: 60%;
+    justify-content: center;
+  }
+  .nav-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--dim);
+    cursor: pointer;
+    transition: all 0.25s;
+    border: none;
+    padding: 0;
+  }
+  .nav-dot.active {
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    width: 20px;
+    border-radius: 3px;
+  }
+  .nav-dot:hover:not(.active) { background: var(--muted); }
+
+  .btn {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    padding: 8px 18px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg2);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,200,239,0.06); }
+  .btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .btn:disabled:hover { border-color: var(--border); color: var(--muted); background: var(--bg2); }
+
+  /* ─── TITLE SLIDE ────────────────────────────────────── */
+  #s0 { align-items: center; justify-content: center; text-align: center; }
+  #s0 .slide-inner {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 0;
+  }
+  .title-eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 24px;
+    padding: 6px 16px;
+    border: 1px solid rgba(0,200,239,0.25);
+    border-radius: 100px;
+    background: rgba(0,200,239,0.06);
+  }
+  .title-main {
+    font-family: var(--serif);
+    font-size: clamp(2.2rem, 5vw, 4rem);
+    font-weight: 700;
+    line-height: 1.1;
+    color: #fff;
+    margin-bottom: 8px;
+    max-width: 800px;
+  }
+  .title-main em { color: var(--accent); font-style: italic; }
+  .title-sub {
+    font-size: 1rem;
+    color: var(--muted);
+    margin-bottom: 40px;
+    font-style: italic;
+    max-width: 600px;
+  }
+  .title-tags {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    justify-content: center;
+    margin-bottom: 48px;
+  }
+  .title-meta {
+    display: flex; gap: 32px;
+    padding-top: 32px;
+    border-top: 1px solid var(--border);
+  }
+  .title-meta-item { text-align: center; }
+  .title-meta-item .val {
+    font-family: var(--mono);
+    font-size: 1.5rem;
+    color: var(--accent);
+    display: block;
+    margin-bottom: 4px;
+  }
+  .title-meta-item .key {
+    font-size: 0.78rem;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* ─── SECTION DIVIDER SLIDE ─────────────────────────── */
+  .section-slide {
+    align-items: center;
+    justify-content: center;
+  }
+  .section-slide .slide-inner {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+  }
+  .section-num {
+    font-family: var(--mono);
+    font-size: clamp(4rem, 12vw, 9rem);
+    font-weight: 500;
+    color: rgba(0,200,239,0.08);
+    line-height: 1;
+    margin-bottom: -20px;
+    letter-spacing: -0.05em;
+  }
+
+  /* ─── SOURCES ────────────────────────────────────────── */
+  .sources-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .source-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 0.72rem;
+    color: var(--muted);
+    line-height: 1.4;
+    padding: 5px 8px;
+    border-radius: 5px;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+  }
+  .source-item:hover { border-color: var(--border); background: var(--bg2); }
+  .source-item .sn {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent);
+    flex-shrink: 0;
+    padding-top: 1px;
+  }
+
+  /* ─── SMALL HELPERS ──────────────────────────────────── */
+  .mt-8  { margin-top: 8px; }
+  .mt-16 { margin-top: 16px; }
+  .mt-20 { margin-top: 20px; }
+  .mt-24 { margin-top: 24px; }
+  .mb-0  { margin-bottom: 0 !important; }
+  .gap-12 { gap: 12px !important; }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 3fr 2fr;
+    gap: 28px;
+    align-items: start;
+  }
+  .two-col-eq {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  .scrollable {
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  /* Keyboard hint */
+  .key-hint {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--dim);
+    letter-spacing: 0.05em;
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════
+     HEADER BAR
+══════════════════════════════════════════════════════════ -->
+<div style="display:flex;flex-direction:column;height:100vh;">
+
+  <div class="header-bar">
+    <span class="label">Braki danych — analiza statystyczna i uczenie maszynowe</span>
+    <span class="slide-num" id="slide-counter">01 / 14</span>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:7.14%"></div></div>
+
+  <!-- ══ SLIDES DECK ══════════════════════════════════════ -->
+  <div class="deck">
+
+    <!-- ── SLIDE 0: TITLE ────────────────────────────────── -->
+    <div class="slide active" id="s0">
+      <div class="slide-inner">
+        <div class="title-eyebrow">Analiza Statystyczna · Uczenie Maszynowe</div>
+        <h1 class="title-main">Metody obsługi<br><em>braków danych</em></h1>
+        <p class="title-sub">Kompleksowy przegląd technik — od eliminacji rekordów do głębokiego uczenia</p>
+        <div class="title-tags">
+          <span class="badge cyan">MCAR · MAR · MNAR</span>
+          <span class="badge violet">Multiple Imputation</span>
+          <span class="badge green">Machine Learning</span>
+          <span class="badge amber">XGBoost · MICE · FIML</span>
+        </div>
+        <div class="title-meta">
+          <div class="title-meta-item">
+            <span class="val">3</span>
+            <span class="key">Mechanizmy braków</span>
+          </div>
+          <div class="title-meta-item">
+            <span class="val">10+</span>
+            <span class="key">Metod imputacji</span>
+          </div>
+          <div class="title-meta-item">
+            <span class="val">67</span>
+            <span class="key">Cytowanych źródeł</span>
+          </div>
+          <div class="title-meta-item">
+            <span class="val">1976</span>
+            <span class="key">Rubin — rok taksonomii</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SLIDE 1: PROBLEM ──────────────────────────────── -->
+    <div class="slide" id="s1">
+      <div class="slide-inner">
+        <div class="slide-tag">Wprowadzenie</div>
+        <h2>Dlaczego braki danych są <span class="accent">krytyczne?</span></h2>
+        <div class="two-col">
+          <div>
+            <p class="lead">Brakujące wartości to nieodłączny element niemal każdej dziedziny badań ilościowych — od badań klinicznych, przez rynki finansowe, aż po wielkoskalową analizę zachowań konsumentów.</p>
+            <div class="divider"></div>
+            <h3>Konsekwencje ignorowania braków</h3>
+            <ul class="styled mt-8">
+              <li>Systematyczne obciążenie (<em>bias</em>) parametrów modelu</li>
+              <li>Znaczna redukcja mocy statystycznych testów</li>
+              <li>Zniekształcenie dystrybucji i przedziałów ufności</li>
+              <li>Fałszywe wnioski i wadliwe modele predykcyjne</li>
+              <li>Utrata kluczowych segmentów demograficznych</li>
+            </ul>
+            <div class="callout mt-16">
+              <span class="icon">⚡</span>
+              <span>Przy 100 zmiennych z zaledwie 2% braków na każdej, listwise deletion eliminuje ok. <strong>86%</strong> całej bazy danych (1 − 0,98¹⁰⁰ ≈ 0,86).</span>
+            </div>
+          </div>
+          <div>
+            <div class="card cyan">
+              <h3>Obszary zastosowań</h3>
+              <ul class="styled mt-8">
+                <li>Badania kliniczne i medyczne</li>
+                <li>Portfele rynków finansowych</li>
+                <li>Analityka zachowań konsumentów</li>
+                <li>Modelowanie równań strukturalnych (SEM)</li>
+                <li>Szeregi czasowe i dane panelowe</li>
+                <li>Badania kwestionariuszowe</li>
+              </ul>
+            </div>
+            <div class="card violet mt-16">
+              <h3>Spektrum rozwiązań</h3>
+              <div class="timeline mt-8">
+                <div class="timeline-item">
+                  <div class="timeline-dot">1</div>
+                  <div class="timeline-content"><h4>Eliminacja rekordów</h4><p>Listwise, Pairwise, Dropping columns</p></div>
+                </div>
+                <div class="timeline-item">
+                  <div class="timeline-dot">2</div>
+                  <div class="timeline-content"><h4>Jednokrotna imputacja</h4><p>Miary centralne, LOCF, regresja liniowa</p></div>
+                </div>
+                <div class="timeline-item">
+                  <div class="timeline-dot">3</div>
+                  <div class="timeline-content"><h4>Imputacja wielokrotna</h4><p>MI (Rubin), MICE + PMM, Amelia II, FIML</p></div>
+                </div>
+                <div class="timeline-item">
+                  <div class="timeline-dot">4</div>
+                  <div class="timeline-content"><h4>Uczenie maszynowe</h4><p>k-NN, MissForest, MIDAS, GAIN, XGBoost</p></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SLIDE 2: TAKSONOMIA ────────────────────────────── -->
+    <div class="slide" id="s2">
+      <div class="slide-inner">
+        <div class="slide-tag">Taksonomia mechanizmów — Donald Rubin (1976)</div>
+        <h2>Trzy <span class="accent">mechanizmy</span> powstawania braków</h2>
+        <div class="grid-3">
+          <div class="card cyan">
+            <span class="badge cyan">MCAR</span>
+            <h3>Missing Completely at Random</h3>
+            <p style="font-size:.85rem;color:#7a9fb5;line-height:1.6;">Prawdopodobieństwo braku jest <strong>całkowicie niezależne</strong> od wszystkich zmiennych obserwowanych i nieobserwowanych.</p>
+            <div class="divider"></div>
+            <h3>Przykłady</h3>
+            <ul class="styled mt-8">
+              <li>Rozlana kawa na ankietę</li>
+              <li>Losowa awaria sprzętu pomiarowego</li>
+              <li>Planowane brakowanie w projekcie badawczym</li>
+            </ul>
+            <div class="divider"></div>
+            <h3>Weryfikacja</h3>
+            <p style="font-size:.82rem;color:#6a8aa0;">Test Little'a: p &gt; 0,05 → hipoteza zerowa o losowości braków zostaje przyjęta.</p>
+            <div class="callout success mt-8">
+              <span class="icon">✓</span>
+              <span style="font-size:.8rem;">Eliminacja rekordów nie wprowadza <em>bias</em> — tylko zmniejsza moc.</span>
+            </div>
+          </div>
+
+          <div class="card violet">
+            <span class="badge violet">MAR</span>
+            <h3>Missing at Random</h3>
+            <p style="font-size:.85rem;color:#9a8abf;line-height:1.6;">Prawdopodobieństwo braku zależy od <strong>innych zmiennych obserwowanych</strong>, lecz nie od samej nieobserwowanej wartości.</p>
+            <div class="divider"></div>
+            <h3>Przykłady</h3>
+            <ul class="styled mt-8">
+              <li>Młodsze osoby częściej pomijają pytania o dochód</li>
+              <li>Braki w danych oceanograficznych wg układu przestrzennego boi</li>
+              <li>Odpady w badaniach uwarunkowane wiekiem uczestnika</li>
+            </ul>
+            <div class="divider"></div>
+            <div class="formula">P(M | Y_obs, Y_mis) = P(M | Y_obs)</div>
+            <div class="callout mt-8" style="font-size:.8rem;">
+              <span class="icon">ℹ</span>
+              <span>Wymaga włączenia <em>auxiliary variables</em> do modeli imputacyjnych.</span>
+            </div>
+          </div>
+
+          <div class="card red">
+            <span class="badge red">MNAR</span>
+            <h3>Missing Not at Random</h3>
+            <p style="font-size:.85rem;color:#bf9090;line-height:1.6;">Prawdopodobieństwo braku jest bezpośrednio związane z <strong>samą nieobserwowaną wartością</strong>.</p>
+            <div class="divider"></div>
+            <h3>Przykłady</h3>
+            <ul class="styled mt-8">
+              <li>Pacjenci z pogorszeniem zdrowia rezygnują z badania</li>
+              <li>Osoby z wysokimi dochodami pomijają rubrykę zarobków</li>
+              <li>Attrition zależny od obserwowanego wyniku klinicznego</li>
+            </ul>
+            <div class="divider"></div>
+            <div class="callout danger mt-8">
+              <span class="icon">⚠</span>
+              <span style="font-size:.8rem;">Niemożliwe do matematycznego udowodnienia na bazie samych danych! Wymaga DAG i wiedzy domenowej.</span>
+            </div>
+          </div>
+        </div>
+        <div class="callout mt-16">
+          <span class="icon">💡</span>
+          <span>Diagnoza mechanizmu rzadko może opierać się wyłącznie na algorytmach — wymaga głębokiego rozumienia procesu generującego dane i wiedzy eksperta dziedziny.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SLIDE 3: ELIMINACJA ───────────────────────────── -->
+    <div class="slide" id="s3">
+      <div class="slide-inner">
+        <div class="slide-tag">Metody eliminacji rekordów</div>
+        <h2>Listwise vs <span class="accent">Pairwise</span> Deletion</h2>
+        <div class="grid-2 mt-8">
+          <div class="card cyan">
+            <span class="badge cyan">Listwise Deletion</span>
+            <h3>Analiza przypadków kompletnych</h3>
+            <p style="font-size:.85rem;color:#7a9fb5;line-height:1.6;">Eliminuje każdy wiersz zawierający choćby jedną pustą wartość. Domyślne ustawienie w większości oprogramowania statystycznego.</p>
+            <ul class="styled mt-12">
+              <li><strong>Zaleta:</strong> Brak bias przy założeniu MCAR; poprawne macierze dodatnio określone</li>
+              <li><strong>Wada:</strong> Potężna redukcja próby — przy 100 cechach i 2% brakach traci ~86% danych</li>
+              <li><strong>Wada:</strong> Przy naruszeniu MCAR — zniekształcenie profilu próbki</li>
+            </ul>
+            <div class="callout warn mt-12">
+              <span class="icon">📌</span>
+              <span style="font-size:.8rem;">Zalecane wyłącznie przy MCAR ≤ 5% w bardzo dużych bazach.</span>
+            </div>
+          </div>
+          <div class="card violet">
+            <span class="badge violet">Pairwise Deletion</span>
+            <h3>Analiza dostępnych zmiennych</h3>
+            <p style="font-size:.85rem;color:#9a8abf;line-height:1.6;">Usuwa braki jedynie dla konkretnej operacji — np. macierz korelacji A↔B pomija braki na C.</p>
+            <ul class="styled mt-12">
+              <li><strong>Zaleta:</strong> Zachowuje więcej obserwacji; maksymalizuje wydobycie wartości</li>
+              <li><strong>Wada:</strong> Heterogeniczne podpróbki — niespójne N dla różnych estymacji</li>
+              <li><strong>Wada:</strong> Ryzyko macierzy <em>non-positive definite</em> — awaria SEM</li>
+            </ul>
+            <div class="callout mt-12">
+              <span class="icon">⚡</span>
+              <span style="font-size:.8rem;">Błędy standardowe mogą być zawyżone lub zaniżone; problemy z wielowymiarową analizą.</span>
+            </div>
+          </div>
+        </div>
+        <div class="mt-20">
+          <table class="comp">
+            <thead>
+              <tr>
+                <th>Właściwość</th>
+                <th>Listwise</th>
+                <th>Pairwise</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Spójność N</td><td>Stała dla całej analizy</td><td>Zmienna — inna dla każdej pary</td></tr>
+              <tr><td>Bias (MCAR)</td><td>Brak obciążenia</td><td>Relatywnie odporniejsze</td></tr>
+              <tr><td>Macierze dodatnio określone</td><td>Gwarantowane</td><td>Ryzyko awarii</td></tr>
+              <tr><td>Utrata informacji</td><td>Skrajna (całe wiersze)</td><td>Minimalna (tylko braki)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout danger mt-16">
+          <span class="icon">✂</span>
+          <span>Usunięcie całej kolumny (<em>Dropping Variables</em>) uzasadnione, gdy brakuje powyżej <strong>40–50%</strong> wartości — po wykluczeniu unikalnej użyteczności zmiennej.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SLIDE 4: SINGLE IMPUTATION ────────────────────── -->
+    <div class="slide" id="s4">
+      <div class="slide-inner">
+        <div class="slide-tag">Jednokrotna imputacja statystyczna</div>
+        <h2>Miary centralne, <span class="accent">LOCF</span> i regresja</h2>
+        <div class="grid-3">
+          <div class="card cyan">
+            <span class="badge cyan">Miary centralne</span>
+            <h3>Średnia / Mediana / Dominanta</h3>
+            <ul class="styled mt-8">
+              <li><strong>Średnia</strong> — rozkład normalny, małe braki</li>
+              <li><strong>Mediana</strong> — odporna na wartości skrajne (ceny, wynagrodzenia)</li>
+              <li><strong>Dominanta</strong> — zmienne kategoryczne</li>
+              <li><strong>Stała arbitralna</strong> — 0 lub −999 jako osobna kategoria dla RF</li>
+            </ul>
+            <div class="callout danger mt-12">
+              <span class="icon">⚠</span>
+              <span style="font-size:.79rem;">Sztucznie zawęża wariancję, zawyża kurtozę, zaniża korelacje i fałszuje przedziały ufności.</span>
+            </div>
+          </div>
+
+          <div class="card amber">
+            <span class="badge amber">Szeregi czasowe</span>
+            <h3>LOCF / BOCF / Interpolacja</h3>
+            <ul class="styled mt-8">
+              <li><strong>LOCF</strong> — Forward Fill: przenosi ostatni obserwowany wynik</li>
+              <li><strong>BOCF</strong> — Backward Fill: używa przyszłej obserwacji</li>
+              <li><strong>Interpolacja liniowa</strong> — dla łagodnych trendów (ceny, prądy)</li>
+            </ul>
+            <div class="callout warn mt-12">
+              <span class="icon">⚕</span>
+              <span style="font-size:.79rem;">Organizacje standaryzacyjne odradzają LOCF w badaniach klinicznych — maskuje pogorszenie stanu pacjenta.</span>
+            </div>
+          </div>
+
+          <div class="card violet">
+            <span class="badge violet">Regresja liniowa</span>
+            <h3>Deterministyczna i stochastyczna</h3>
+            <p style="font-size:.82rem;color:#9a8abf;line-height:1.6;margin-bottom:10px;">Zachowuje korelacje kowariancyjne między zmiennymi.</p>
+            <div class="formula">Ŷᵢ = β₀ + β₁Xᵢ</div>
+            <ul class="styled mt-8">
+              <li>Deterministyczna: sztywny punkt na prostej regresji → sztuczny wzrost R²</li>
+              <li>Stochastyczna: dodaje losową resztę εᵢ ~ N(0, σ²ε) → przywraca dystrybucję</li>
+            </ul>
+            <div class="callout mt-8">
+              <span class="icon">💡</span>
+              <span style="font-size:.79rem;">Imputacja stochastyczna = lepsza realizm dystrybucji, ale wciąż ignoruje niepewność estymatora.</span>
+            </div>
+          </div>
+        </div>
+        <div class="callout warn mt-16">
+          <span class="icon">📊</span>
+          <span>Wszystkie metody jednokrotnej imputacji traktują wyestymowaną wartość jako <em>fakt</em> — ignorują niepewność predykcji. Prowadzi to do zaniżania błędów standardowych i fałszywych p-value.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SLIDE 5: MULTIPLE IMPUTATION ──────────────────── -->
+    <div class="slide" id="s5">
+      <div class="slide-inner">
+        <div class="slide-tag">Multiple Imputation — Donald Rubin</div>
+        <h2>Imputacja <span class="accent">wielokrotna</span> — rewolucja trójfazowa</h2>
+        <div class="two-col">
+          <div>
+            <p class="lead">Fundamentalna słabość imputacji jednokrotnej: zastępnik staje się <em>faktem matematycznym</em> dla procesora. Niepewność predykcji powinna być odzwierciedlona w zmienności wyników.</p>
+            <div class="divider"></div>
+            <div class="timeline mt-8">
+              <div class="timeline-item">
+                <div class="timeline-dot" style="border-color:var(--accent)">I</div>
+                <div class="timeline-content">
+                  <h4>Generacja M zbiorów kompletnych</h4>
+                  <p>Tworzy asynchronicznie m = 5…100 powielonych instancji, każda z mikroskopijnie różnym doważeniem wynikającym z drgań parametrów modelu szacowania.</p>
+                </div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-dot" style="border-color:#a78bfa">II</div>
+                <div class="timeline-content">
+                  <h4>Analiza każdej instancji osobno</h4>
+                  <p>Docelowy model statystyczny jest uruchamiany niezależnie na każdym ze zbiorów mᵢ, generując odrębny zestaw estymatorów parametrycznych i błędów.</p>
+                </div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-dot" style="border-color:#34d399">III</div>
+                <div class="timeline-content">
+                  <h4>Reguły Rubina — synteza wyników</h4>
+                  <p>Łączy wyniki za pomocą formuł uwzględniających wariancję wewnątrz- i między-imputacyjną.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="card green">
+              <h3>Reguły Rubina (Rubin's Rules)</h3>
+              <div class="formula mt-8">V_total = W̄ + (1 + 1/M) · B</div>
+              <ul class="styled mt-12">
+                <li><strong>W̄</strong> — średnia wariancja wewnątrz-imputacyjna (<em>within</em>)</li>
+                <li><strong>B</strong> — wariancja między-imputacyjna (<em>between</em>)</li>
+                <li><strong>M</strong> — liczba wygenerowanych zbiorów</li>
+              </ul>
+              <div class="callout success mt-12">
+                <span class="icon">✓</span>
+                <span style="font-size:.8rem;">Poprawnie uwzględnia niepewność estymacji → właściwe p-value i przedziały ufności.</span>
+              </div>
+            </div>
+            <div class="card amber mt-16">
+              <h3>Kiedy używać MI?</h3>
+              <ul class="styled mt-8">
+                <li>Dane o mechanizmie MCAR lub MAR</li>
+                <li>Złożone modele wielowymiarowe</li>
+                <li>Badania kliniczne wymagające raportowania niepewności</li>
+                <li>Gdy liczba braków przekracza 5–10%</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SLIDE 6: MICE + PMM ───────────────────────────── -->
+    <div class="slide" id="s6">
+      <div class="slide-inner">
+        <div class="slide-tag">MICE · PMM · Amelia II</div>
+        <h2>Algorytmy <span class="accent">łańcuchowych równań</span> i maksymalizacja wiarygodności</h2>
+        <div class="grid-3">
+          <div class="card cyan">
+            <span class="badge cyan">MICE</span>
+            <h3>Multivariate Imputation by Chained Equations</h3>
+            <p style="font-size:.82rem;color:#7a9fb5;line-height:1.6;">Zamiast modelować łączny rozkład wielowymiarowy, imputuje braki <strong>iteracyjnie</strong> — jeden atrybut na raz, używając pozostałych jako predyktorów.</p>
+            <div class="divider"></div>
+            <ul class="styled">
+              <li>Pełna Specyfikacja Warunkowa (FCS)</li>
+              <li>Sekwencyjne skanowanie jak Gibbs Sampling</li>
+              <li>Każda kolumna ma własny model (liniowy, logistyczny…)</li>
+              <li>Iteracje aż do konwergencji</li>
+            </ul>
+            <div class="callout warn mt-8">
+              <span class="icon">⚠</span>
+              <span style="font-size:.79rem;">Ryzyko błędów przy interakcjach niepodanych ręcznie i danych wysokowymiarowych bez wspierających wielomianów.</span>
+            </div>
+          </div>
+
+          <div class="card violet">
+            <span class="badge violet">PMM</span>
+            <h3>Predictive Mean Matching</h3>
+            <p style="font-size:.82rem;color:#9a8abf;line-height:1.6;">Zamiast wstawiać abstrakcyjną wartość z regresji, <strong>wyszukuje prawdziwych "dawców"</strong> w populacji.</p>
+            <div class="divider"></div>
+            <ol class="styled">
+              <li>Oblicza prognozę regresji dla luki</li>
+              <li>Szuka 3–5 najbliższych rekordów z prawdziwymi wartościami</li>
+              <li>Losuje jednego "dawcę" i wstawia jego autentyczną wartość</li>
+            </ol>
+            <div class="callout success mt-8">
+              <span class="icon">✓</span>
+              <span style="font-size:.79rem;">Chroni asymetrię dystrybucji; nie generuje wartości niemożliwych (np. ujemnych wzrostów).</span>
+            </div>
+          </div>
+
+          <div class="card green">
+            <span class="badge green">Amelia II + EM</span>
+            <h3>Expectation-Maximization z Bootstrappingiem</h3>
+            <p style="font-size:.82rem;color:#5ab899;line-height:1.6;">Sekwencja kroków E (oczekiwanie) i M (maksymalizacja) do aproksymacji MLE na niekompletnych danych.</p>
+            <div class="divider"></div>
+            <ul class="styled">
+              <li><strong>E-step:</strong> szacuje brakujące wartości przy aktualnych parametrach</li>
+              <li><strong>M-step:</strong> aktualizuje parametry na pełnych danych</li>
+              <li>Bootstrap dodaje stochastykę → właściwa MI</li>
+              <li>Wymaga wielowymiarowej normalności (MVN)</li>
+            </ul>
+            <div class="callout mt-8">
+              <span class="icon">⚡</span>
+              <span style="font-size:.79rem;">Fenomenalna przepustowość na danych podłużnych i przekrojowych z dużymi ubytkami.</span>
+            </div>
+          </div>
+        </div>
+        <div class="code-block mt-16">
+          <span class="cm"># Przykład MICE w R (pakiet mice)</span><br>
+          <span class="kw">library</span>(<span class="st">mice</span>)<br>
+          imputed &lt;- <span class="fn">mice</span>(dane, m=<span class="nm">20</span>, method=<span class="st">"pmm"</span>, seed=<span class="nm">42</span>)<br>
+          fit     &lt;- <span class="fn">with</span>(imputed, <span class="fn">lm</span>(wynik ~ wiek + płeć + bmi))<br>
+          results &lt;- <span class="fn">pool</span>(fit)  <span class="cm"># Reguły Rubina</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SLIDE 7: FIML ──────────────────────────────────── -->
+    <div class="slide" id="s7">
+      <div class="slide-inner">
+        <div class="slide-tag">Full Information Maximum Likelihood</div>
+        <h2>FIML — imputacja <span class="accent">bez wypełniania</span> braków</h2>
+        <div class="two-col">
+          <div>
+            <p class="lead">FIML nie tworzy syntetycznych zbiorów danych — bezpośrednio optymalizuje parametry modelu na dostępnych fragmentach macierzy, obliczając log-likelihood dla każdego wiersza osobno.</p>
+            <div class="divider"></div>
+            <h3>Kluczowe zalety FIML</h3>
+            <ul class="styled mt-8">
+              <li>Brak protokołu pre-processingu (żadnych protez danych)</li>
+              <li>Asymptotyczna efektywność przy małych próbach N</li>
+              <li>Deterministyczny wynik — zawsze identyczny przy powtórzeniu</li>
+              <li>Brak problemu <em>uncongenial imputation</em> (sprzeczność modeli)</li>
+              <li>Precyzyjniejsze węższe p-value niż MICE przy małych N</li>
+            </ul>
+            <div class="callout mt-16">
+              <span class="icon">🎯</span>
+              <span>W symulacjach von Hippela FIML wykazuje nieosiągalną matematycznie asymptotyczną wydajność korelacyjną przy małych próbkach w porównaniu do MI.</span>
+            </div>
+            <div class="callout warn mt-8">
+              <span class="icon">⚠</span>
+              <span>FIML jest dostępne głównie dla SEM (np. Mplus). Słabo radzi sobie z kategorycznymi zmiennymi bez normalności i złożonymi interakcjami nieliniowymi.</span>
+            </div>
+          </div>
+          <div>
+            <div class="card cyan">
+              <h3>MI vs FIML — porównanie</h3>
+              <table class="comp mt-8">
+                <thead><tr><th>Cecha</th><th>MI</th><th>FIML</th></tr></thead>
+                <tbody>
+                  <tr><td>Produkt pośredni</td><td>M zbiorów kompletnych</td><td>Brak (optymalizacja in-situ)</td></tr>
+                  <tr><td>Powtarzalność</td><td>Stochastyczna</td><td>Deterministyczna</td></tr>
+                  <tr><td>Spójność modeli</td><td>Ryzyko uncongenial</td><td>Bezpieczna</td></tr>
+                  <tr><td>Zmienne kat.</td><td>Doskonała</td><td>Ograniczona</td></tr>
+                  <tr><td>SE przy małym N</td><td>Wymaga dużego M</td><td>Precyzyjne</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="card amber mt-16">
+              <h3>Kiedy wybrać FIML?</h3>
+              <ul class="styled mt-8">
+                <li>Dane ciągłe, normalnie rozłożone</li>
+                <li>Modelowanie SEM (Mplus, lavaan)</li>
+                <li>Małe próby wymagające precyzyjnych SE</li>
+                <li>Wymagana powtarzalność wyników</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SLIDE 8: kNN + MissForest ─────────────────────── -->
+    <div class="slide" id="s8">
+      <div class="slide-inner">
+        <div class="slide-tag">Machine Learning — nieliniowe metody imputacji</div>
+        <h2>k-NN i <span class="accent">MissForest</span></h2>
+        <div class="two-col-eq">
+          <div>
+            <div class="card cyan">
+              <span class="badge cyan">k-Nearest Neighbors</span>
+              <h3>Imputacja przez sąsiedztwo</h3>
+              <p style="font-size:.84rem;color:#7a9fb5;line-height:1.6;">Mapuje odległość euklidesową / Hamminga / Manhattan między brakującym rekordem a pozostałymi obserwacjami. Uśrednia k najbliższych sąsiadów.</p>
+              <div class="divider"></div>
+              <div class="grid-2" style="gap:10px;">
+                <div>
+                  <h3 style="color:#34d399">✓ Zalety</h3>
+                  <ul class="styled mt-8">
+                    <li>Fenomenalny na małych klastrach medycznych</li>
+                    <li>Odzwierciedla lokalne wzorce dystrybucji</li>
+                    <li>Nie zakłada normalności</li>
+                  </ul>
+                </div>
+                <div>
+                  <h3 style="color:#f87171">✗ Wady</h3>
+                  <ul class="styled mt-8">
+                    <li>Klątwa Wymiarowości — O(n²) złożoność</li>
+                    <li>Geormetria euklidesowa degeneruje w wysokich wymiarach</li>
+                    <li>Kosztowne przy setkach tysięcy cech</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="card violet">
+              <span class="badge violet">MissForest</span>
+              <h3>Las Losowy jako imputator</h3>
+              <p style="font-size:.84rem;color:#9a8abf;line-height:1.6;">Nieparametryczny algorytm iteracyjny oparty na Random Forest. Inicjuje wstępne imputacje medianą, następnie iteracyjnie trenuje lasy na dostępnych danych.</p>
+              <div class="divider"></div>
+              <ul class="styled">
+                <li>Wbudowana obsługa mieszanych typów danych (numeryczne + kategoryczne)</li>
+                <li>Automatyczne wykrywanie interakcji między zmiennymi</li>
+                <li>Ewaluacja błędu Out-Of-Bag (OOB) — auto-zatrzymanie</li>
+                <li>Wariant RFE-MF: rekurencyjna eliminacja nieistotnych cech</li>
+              </ul>
+              <div class="callout success mt-12">
+                <span class="icon">🏆</span>
+                <span style="font-size:.8rem;">Przewyższa MICE w presji nieliniowej — brak wymagań normalizacji dystrybucji!</span>
+              </div>
+              <div class="callout danger mt-8">
+                <span class="icon">⚡</span>
+                <span style="font-size:.8rem;">Wysokie wymagania obliczeniowe — trenowanie wielu drzew dla każdej zmiennej.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="code-block mt-16">
+          <span class="cm"># MissForest w R</span><br>
+          <span class="kw">library</span>(<span class="st">missForest</span>)<br>
+          result &lt;- <span class="fn">missForest</span>(dane_z_brakami, maxiter=<span class="nm">10</span>, ntree=<span class="nm">100</span>, verbose=<span class="nm">TRUE</span>)<br>
+          imputed_data &lt;- result$<span class="fn">ximp</span>  <span class="cm"># Zrekonstruowany zbiór</span><br>
+          oob_error    &lt;- result$<span class="fn">OOBerror</span>  <span class="cm"># Błąd estymacji</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SLIDE 9: MIDAS + GAIN ──────────────────────────── -->
+    <div class="slide" id="s9">
+      <div class="slide-inner">
+        <div class="slide-tag">Głębokoe uczenie — Deep Learning</div>
+        <h2>Autoencodery i <span class="accent">GAN</span> w imputacji braków</h2>
+        <div class="two-col-eq">
+          <div>
+            <div class="card cyan">
+              <span class="badge cyan">MIDAS</span>
+              <h3>Multiple Imputation with Denoising Autoencoders</h3>
+              <p style="font-size:.83rem;color:#7a9fb5;line-height:1.6;">Kompresuje macierz danych do niskowymiarowej reprezentacji ukrytej, usuwając szum (w tym braki), następnie rekonstruuje pełny zbiór przez dekoder.</p>
+              <div class="divider"></div>
+              <div class="grid-2" style="gap:8px;">
+                <div class="stat-box">
+                  <div class="num" style="font-size:1.4rem;">⬇</div>
+                  <div class="lbl">Koder<br>kompresja + odszumienie</div>
+                </div>
+                <div class="stat-box">
+                  <div class="num" style="font-size:1.4rem;">⬆</div>
+                  <div class="lbl">Dekoder<br>rekonstrukcja pełna</div>
+                </div>
+              </div>
+              <div class="callout success mt-8">
+                <span class="icon">🧠</span>
+                <span style="font-size:.79rem;">W badaniach SPARK (autyzm) MIDAS przewyższył MICE przy blockwise-MNAR — rozwiązał asymetrię rzutów w 10 min na dużych metadanych.</span>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="card violet">
+              <span class="badge violet">GAIN</span>
+              <h3>Generative Adversarial Imputation Nets</h3>
+              <p style="font-size:.83rem;color:#9a8abf;line-height:1.6;">Architektura GAN — Generator G rekonstruuje braki, Dyskryminator D odróżnia imputed od prawdziwych wartości.</p>
+              <div class="divider"></div>
+              <ul class="styled">
+                <li><strong>Generator (G):</strong> wstawia fikcyjne wartości w brakujące miejsca</li>
+                <li><strong>Dyskryminator (D):</strong> ucząc G — wymusza realistyczność imputacji</li>
+                <li><strong>Hinty:</strong> częściowe maski ułatwiające stabilizację treningu</li>
+              </ul>
+              <div class="callout warn mt-8">
+                <span class="icon">⚠</span>
+                <span style="font-size:.79rem;">W testach zderzeniowych DAE i GAIN często ustępują MICE przy asymetrycznych dystrybucjach w standardowych benchmarkach ML.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card amber mt-16">
+          <h3 style="color:#fbbf24">Kluczowe wnioski — Deep Learning vs klasyczne metody</h3>
+          <div class="grid-2" style="gap:16px;margin-top:12px;">
+            <ul class="styled">
+              <li>DL wygrywa przy strukturalnych brakach blokowych (BSMR) i wysokowymiarowych zbiorach nieliniowych</li>
+              <li>MIDAS szczególnie skuteczny przy blockwise-MNAR w badaniach psychologicznych</li>
+            </ul>
+            <ul class="styled">
+              <li>Tradycyjne MICE + PMM często skuteczniejsze w standardowych scenariuszach liniowych</li>
+              <li>DL — niestabilny charakter treningu; ryzyko katastrofalnego odrzutu precyzji</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SLIDE 10: XGBoost ──────────────────────────────── -->
+    <div class="slide" id="s10">
+      <div class="slide-inner">
+        <div class="slide-tag">Natywna obsługa braków — Gradient Boosting</div>
+        <h2>XGBoost, LightGBM i <span class="accent">CatBoost</span></h2>
+        <div class="two-col">
+          <div>
+            <p class="lead">Rewolucyjne rozwiązanie: zamiast imputować braki przed modelowaniem, algorytmy boostingowe obsługują brakujące wartości <em>natywnie</em> podczas treningu.</p>
+            <div class="card cyan mt-16">
+              <span class="badge cyan">XGBoost — Sparsity-aware Split Finding</span>
+              <p style="font-size:.84rem;color:#7a9fb5;line-height:1.6;margin-top:8px;">Przy każdym podziale węzła testuje, w którą stronę (lewo/prawo) optymalnie skierować brakujące wartości — minimalizując funkcję straty.</p>
+              <div class="formula mt-8">Default Direction = argmax (Gain_left, Gain_right)</div>
+              <ul class="styled mt-12">
+                <li>Analizuje gradient G i hesjan H funkcji straty dla wartości brakujących</li>
+                <li>Zapisuje regułę "Default Direction" do węzła — używana przy nowych danych</li>
+                <li>Brak konieczności zewnętrznego pre-processingu!</li>
+              </ul>
+            </div>
+          </div>
+          <div>
+            <div class="card amber">
+              <span class="badge amber">CART — Surrogate Splits</span>
+              <p style="font-size:.82rem;color:#c8a74a;line-height:1.6;margin-top:8px;">Klasyczne drzewa radzą sobie z brakami przez podziały zastępcze — używają silnie skorelowanego predyktora jako surogatu.</p>
+            </div>
+            <div class="card green mt-14">
+              <span class="badge green">LightGBM</span>
+              <p style="font-size:.82rem;color:#5ab899;line-height:1.6;margin-top:8px;">Wszystkie wartości NaN trafiają do osobnej gałęzi — wydajność na rzadkich, wielkich bazach; doskonała przepustowość.</p>
+            </div>
+            <div class="card violet mt-14">
+              <span class="badge violet">CatBoost — Target-Based Statistics</span>
+              <p style="font-size:.82rem;color:#9a8abf;line-height:1.6;margin-top:8px;">Dla zmiennych kategorycznych z brakami oblicza statystyki docelowe, zrywając całkowicie z potrzebą tworzenia MICE dla kategorii.</p>
+            </div>
+          </div>
+        </div>
+        <div class="callout success mt-16">
+          <span class="icon">🏆</span>
+          <span>Przy użyciu XGBoost/LightGBM/CatBoost inżynier unika konieczności zewnętrznej imputacji — eliminując ryzyko sztucznych artefaktów i upraszczając pipeline danych.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SLIDE 11: MNAR + MISSING INDICATOR ────────────── -->
+    <div class="slide" id="s11">
+      <div class="slide-inner">
+        <div class="slide-tag">Zaawansowane strategie — MNAR i analiza wrażliwości</div>
+        <h2>Braki nielosowe i <span class="accent">Missing Indicator</span></h2>
+        <div class="grid-2">
+          <div>
+            <div class="card red">
+              <span class="badge red">MNAR — najpoważniejsze wyzwanie</span>
+              <h3 class="mt-8">Analiza wrażliwości (Sensitivity Analysis)</h3>
+              <p style="font-size:.83rem;color:#bf9090;line-height:1.6;">Gdy brak zależy od samej brakującej wartości — żadna metoda imputacji nie eliminuje pełnego bias. Konieczna analiza scenariuszy.</p>
+              <ul class="styled mt-8">
+                <li><strong>Pattern-Mixture Models:</strong> modelowanie warstw wzorców braków</li>
+                <li><strong>Delta-adjustment:</strong> przesunięcie imputowanych wartości o δ w dół/górę</li>
+                <li><strong>Tipping-Point Analysis:</strong> szukanie progu δ obalającego wnioski</li>
+                <li><strong>DAG:</strong> acykliczne grafy przyczynowe do modelowania struktury MNAR</li>
+              </ul>
+              <div class="code-block mt-12">
+                <span class="cm">/* SAS — MNAR Adjust */</span><br>
+                PROC <span class="fn">MI</span> DATA=pacjenci;<br>
+                &nbsp;&nbsp;MNAR <span class="fn">ADJUST</span>(wynik / SHIFT=<span class="nm">-20</span>);<br>
+                &nbsp;&nbsp;VAR wiek bmi wynik;<br>
+                RUN;
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="card amber">
+              <span class="badge amber">Missing Indicator</span>
+              <h3 class="mt-8">Brak jako osobna informacja</h3>
+              <p style="font-size:.83rem;color:#c8a74a;line-height:1.6;">Zamiast ukrywać fakt braku, kodujemy go explicite jako zmienną binarną dołączoną obok imputowanej kolumny.</p>
+              <div class="formula mt-8">M_col = 1 jeśli brak, 0 jeśli obecne</div>
+              <ul class="styled mt-12">
+                <li>Klasyfikator "widzi" wzorzec braku jako predyktor</li>
+                <li>Szczególnie ważne w finansach — klient ukrywający liczbę dzieci = sygnał ryzyka</li>
+                <li>Missing Indicator w Random Forest przechwytuje ukryte zależności MNAR</li>
+                <li>Komplementarny do standardowej imputacji — nie zastępuje jej</li>
+              </ul>
+              <div class="callout success mt-12">
+                <span class="icon">💡</span>
+                <span style="font-size:.79rem;">Klient odmawiający podania liczby dzieci nie jest przypadkowym brakiem — to krystaliczny sygnał ryzyka kredytowego dla modelu.</span>
+              </div>
+            </div>
+            <div class="card cyan mt-14">
+              <h3>Narzędzia do analizy MNAR</h3>
+              <ul class="styled mt-8">
+                <li>Acykliczne grafy przyczynowe (DAG) — strukturalizacja mechanizmu</li>
+                <li>Sensitivity Analysis Framework — raportowanie zakresu wyników</li>
+                <li>SAS PROC MI z MNAR ADJUST</li>
+                <li>Pattern-Mixture Models w R (pakiet JM)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SLIDE 12: ZMIENNE KAT. + PODSUMOWANIE ─────────── -->
+    <div class="slide" id="s12">
+      <div class="slide-inner">
+        <div class="slide-tag">Podsumowanie i wytyczne decyzyjne</div>
+        <h2>Jak dobrać <span class="accent">optymalną strategię?</span></h2>
+        <div class="grid-3">
+          <div class="card cyan">
+            <span class="badge cyan">Krok 1</span>
+            <h3>Diagnoza mechanizmu</h3>
+            <ul class="styled mt-8">
+              <li>Test Little'a → MCAR?</li>
+              <li>Analiza korelacji braków z innymi zmiennymi → MAR?</li>
+              <li>Wiedza domenowa + DAG → MNAR?</li>
+              <li>Odsetek braków per zmienna</li>
+            </ul>
+          </div>
+          <div class="card violet">
+            <span class="badge violet">Krok 2</span>
+            <h3>Wybór metody</h3>
+            <ul class="styled mt-8">
+              <li>MCAR &lt; 5% → Listwise Deletion</li>
+              <li>MAR, dane ciągłe, SEM → FIML</li>
+              <li>MAR, duże braki → MICE + PMM</li>
+              <li>Dane kategoryczne + numeryczne → MissForest</li>
+              <li>XGBoost/CatBoost → natywnie</li>
+            </ul>
+          </div>
+          <div class="card green">
+            <span class="badge green">Krok 3</span>
+            <h3>Walidacja i raportowanie</h3>
+            <ul class="styled mt-8">
+              <li>Porównaj rozkłady przed/po imputacji</li>
+              <li>Analiza wrażliwości przy MNAR</li>
+              <li>Raportuj metodę i liczbę braków</li>
+              <li>Missing Indicator jako dodatkowy predyktor</li>
+              <li>Dla MI: minimum m = 20 zbiorów</li>
+            </ul>
+          </div>
+        </div>
+        <div class="mt-20">
+          <table class="comp">
+            <thead>
+              <tr><th>Mechanizm</th><th>% braków</th><th>Typ danych</th><th>Zalecana metoda</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>MCAR</td><td>&lt; 5%</td><td>Dowolny</td><td>Listwise Deletion</td></tr>
+              <tr><td>MAR</td><td>&lt; 20%</td><td>Ciągły, normalny + SEM</td><td>FIML</td></tr>
+              <tr><td>MAR</td><td>5–40%</td><td>Mieszany</td><td>MICE + PMM / MissForest</td></tr>
+              <tr><td>MAR</td><td>Dowolny</td><td>Podłużny</td><td>Amelia II + EMB</td></tr>
+              <tr><td>MNAR</td><td>Dowolny</td><td>Dowolny</td><td>Delta-adjustment + Missing Indicator</td></tr>
+              <tr><td>Dowolny</td><td>Dowolny</td><td>Gradient Boosting</td><td>XGBoost / CatBoost (natywnie)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout success mt-16">
+          <span class="icon">🎯</span>
+          <span>Nie istnieje jedna słuszna metoda — prawidłowy wybór zależy od mechanizmu braku, proporcji ubytków, typu danych i docelowego modelu analitycznego.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SLIDE 13: SOURCES + AUTHOR ────────────────────── -->
+    <div class="slide" id="s13">
+      <div class="slide-inner">
+        <div class="slide-tag">Źródła i autor</div>
+        <h2>Źródła <span class="accent">bibliograficzne</span></h2>
+        <div class="sources-list">
+          <div class="source-item"><span class="sn">[1]</span>NCBI / PMC — National Center for Biotechnology Information (wielokrotne badania kliniczne dotyczące imputacji)</div>
+          <div class="source-item"><span class="sn">[2]</span>Journal of Statistical Software — dokumentacje algorytmów statystycznych</div>
+          <div class="source-item"><span class="sn">[3]</span>IEEE Xplore — dokumentacje inżynieryjne Autoencoderów dla ubytków</div>
+          <div class="source-item"><span class="sn">[4]</span>arXiv: GAIN: Missing Data Imputation using Generative Adversarial Nets</div>
+          <div class="source-item"><span class="sn">[5]</span>SAS Institute — procedury MI i MIANALYZE; Sensitivity Analysis 2014</div>
+          <div class="source-item"><span class="sn">[6]</span>Harvard IQSS — Amelia II, intro-mi.html; dokumentacja EMB</div>
+          <div class="source-item"><span class="sn">[7]</span>mice — R package documentation, CRAN; Van Buuren & Groothuis-Oudshoorn</div>
+          <div class="source-item"><span class="sn">[8]</span>Rubin, D.B. (1976) — Inference and Missing Data; Biometrika 63(3):581–592</div>
+          <div class="source-item"><span class="sn">[9]</span>Little, R.J.A. (1988) — A test of MCAR for multivariate data with missing values</div>
+          <div class="source-item"><span class="sn">[10]</span>Statistical Horizons — "Maximum Likelihood is Better Than Multiple Imputation" (von Hippel)</div>
+          <div class="source-item"><span class="sn">[11]</span>Ovid — Comparison of FIML and MI in SEM with Missing Data</div>
+          <div class="source-item"><span class="sn">[12]</span>Mplus Discussion — FIML vs MI (statmodel.com)</div>
+          <div class="source-item"><span class="sn">[13]</span>PMC 11546113 — Novel MissForest-based approach with Recursive Feature Elimination</div>
+          <div class="source-item"><span class="sn">[14]</span>medRxiv 2024 — Benchmarking ML Missing Data Imputation Methods (Mental Health Survey)</div>
+          <div class="source-item"><span class="sn">[15]</span>arXiv 2401.09602 — Evaluating tree-based imputation vs. MICE PMM</div>
+          <div class="source-item"><span class="sn">[16]</span>StatCan — Are deep learning models superior for missing data imputation?</div>
+          <div class="source-item"><span class="sn">[17]</span>PMC 8059005 — GANs for imputing missing data in big data clinical research</div>
+          <div class="source-item"><span class="sn">[18]</span>GeeksforGeeks — Pairwise vs Listwise Deletion; Decision Tree Missing Data</div>
+          <div class="source-item"><span class="sn">[19]</span>CCEB UPenn — Sensitivity Analysis for Not Missing at Random (Emerson)</div>
+          <div class="source-item"><span class="sn">[20]</span>XGBoost / LightGBM / CatBoost — oficjalna dokumentacja obsługi braków danych</div>
+        </div>
+
+        <div class="divider" style="margin-top:24px;"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;">
+          <div>
+            <div class="slide-tag" style="margin:0 0 4px;">Autor</div>
+            <p style="font-family:var(--serif);font-size:1.3rem;color:#fff;font-weight:700;margin:0;">Michał Kłębukowski</p>
+            <p style="font-size:.8rem;color:var(--muted);margin:4px 0 0;">Uniwersytet Zielonogórski · 2026</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /deck -->
+
+  <!-- ══ NAV ══════════════════════════════════════════════ -->
+  <div class="nav">
+    <button class="btn" id="btn-prev" onclick="changeSlide(-1)">← Poprzedni</button>
+    <div class="nav-dots" id="nav-dots"></div>
+    <div style="display:flex;align-items:center;gap:16px;">
+      <span class="key-hint">← → nawigacja</span>
+      <button class="btn" id="btn-next" onclick="changeSlide(1)">Następny →</button>
+    </div>
+  </div>
+
+</div><!-- /outer -->
+
+<script>
+  const TOTAL = 14;
+  let current = 0;
+
+  const slides     = document.querySelectorAll('.slide');
+  const counter    = document.getElementById('slide-counter');
+  const fill       = document.getElementById('progress-fill');
+  const dotsWrap   = document.getElementById('nav-dots');
+  const btnPrev    = document.getElementById('btn-prev');
+  const btnNext    = document.getElementById('btn-next');
+
+  // Build dots
+  for (let i = 0; i < TOTAL; i++) {
+    const d = document.createElement('button');
+    d.className = 'nav-dot' + (i === 0 ? ' active' : '');
+    d.title = `Slajd ${i + 1}`;
+    d.onclick = () => goTo(i);
+    dotsWrap.appendChild(d);
+  }
+
+  function goTo(n) {
+    slides[current].classList.remove('active');
+    dotsWrap.children[current].classList.remove('active');
+    current = Math.max(0, Math.min(TOTAL - 1, n));
+    slides[current].classList.add('active');
+    dotsWrap.children[current].classList.add('active');
+    counter.textContent = String(current + 1).padStart(2,'0') + ' / ' + String(TOTAL).padStart(2,'0');
+    fill.style.width = ((current + 1) / TOTAL * 100) + '%';
+    btnPrev.disabled = current === 0;
+    btnNext.disabled = current === TOTAL - 1;
+  }
+
+  function changeSlide(dir) { goTo(current + dir); }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); changeSlide(1); }
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')                    { e.preventDefault(); changeSlide(-1); }
+    if (e.key === 'Home') goTo(0);
+    if (e.key === 'End')  goTo(TOTAL - 1);
+  });
+
+  // Touch swipe
+  let touchX = null;
+  document.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; });
+  document.addEventListener('touchend', e => {
+    if (touchX === null) return;
+    const dx = e.changedTouches[0].clientX - touchX;
+    if (Math.abs(dx) > 50) changeSlide(dx < 0 ? 1 : -1);
+    touchX = null;
+  });
+
+  goTo(0);
+</script>
+</body>
+</html>
